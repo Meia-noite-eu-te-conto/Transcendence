@@ -4,47 +4,16 @@ STORAGE_USER=storage/user-data
 VOLUMES :=		/goinfre/game-db-data \
 				/goinfre/user-db-data
 
-all: create-dirs run-compose
-
-att: run-compose
-
-run-compose:
-	docker compose up --build
-
-create-dirs:
-	mkdir -p $(STORAGE_GAME)
-	mkdir -p $(STORAGE_USER)
-
-venv:
-	cd src
-	python3 -m venv core
-	source core/bin/activate
-	pip install django
-
-submodule:
-	git submodule init
-	git submodule update
+all: mkdir build
 
 clean:
-	docker compose down
+	docker compose down -v
 	docker volume prune -a -f
-	sudo rm -rf $(STORAGE_GAME) $(STORAGE_USER)
 
-w:
-	docker stop game-sync-session-worker
-	docker stop game-worker
-	docker start game-sync-session-worker
-	docker start game-worker
-
-mkdir:
-	sudo mkdir -p $(VOLUMES)
-
-fclean:
-	docker compose down
-	docker volume prune -a -f
+fclean: clean
 	sudo rm -rf $(VOLUMES)
 
-build: mkdir
+build:
 	docker compose up --build
 
 re: fclean build
