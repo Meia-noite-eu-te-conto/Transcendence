@@ -188,7 +188,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/game-db-data
+      device: ./storage/game-db-data
 
   user-db-data:
     name: user-db-data
@@ -196,4 +196,4 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/user-db-data
+      device: ./storage/user-db-data
