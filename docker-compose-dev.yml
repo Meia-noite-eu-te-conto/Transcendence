@@ -8,6 +8,8 @@ services:
     image: postgres
     container_name: db-user-session
     restart: always
+    ports:
+       - 5432:5432
     shm_size: 128mb
     environment:
       POSTGRES_USER: "${USER_SESSION_POSTGRES_USER}"
@@ -41,6 +43,8 @@ services:
     working_dir: /app
     volumes:
       - user-session-dev:/app
+    ports:
+      - "8002:8002"
     environment:
       DB_NAME: "${USER_SESSION_POSTGRES_DB}"
       DB_USER: "${USER_SESSION_POSTGRES_USER}"
@@ -77,6 +81,8 @@ services:
     image: postgres
     container_name: db-game-core
     restart: always
+    ports:
+       - 5433:5432
     shm_size: 128mb
     environment:
       POSTGRES_USER: "${CORE_GAME_POSTGRES_USER}"
@@ -110,6 +116,8 @@ services:
     working_dir: /app
     volumes:
       - game-core-dev:/app
+    ports:
+      - "8001:8001"
     environment:
       DB_NAME: "${CORE_GAME_POSTGRES_DB}"
       DB_USER: "${CORE_GAME_POSTGRES_USER}"
@@ -142,12 +150,12 @@ services:
 
   nginx:
     build:
-      context: ./Game-Front-End/nginx/
+      context: ./game-front-end/nginx/
     image: game-front-end:latest
     container_name: game-front-end
     ports:
       - "8080:80"
-      - "8443:443"
+      - "8443:443"  # Porta para HTTPS
     volumes:
       - front-end-dev:/usr/share/nginx/html
     depends_on:
@@ -156,6 +164,8 @@ services:
   
   redis:
     image: "redis:latest"
+    ports:
+      - "6379:6379"
 
 volumes:
   game-core-dev:
@@ -164,7 +174,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/game-core-dev
+      device: ./game-core/src
 
   user-session-dev:
     name: user-session-dev
@@ -172,7 +182,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/user-session-dev
+      device: ./user-session/src
 
   front-end-dev:
     name: front-end-dev
@@ -180,7 +190,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/front-end-dev
+      device: ./game-front-end/src
 
   game-db-data:
     name: game-db-data
@@ -188,7 +198,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/game-db-data
+      device: ./storage/game-data
 
   user-db-data:
     name: user-db-data
@@ -196,4 +206,4 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: /goinfre/user-db-data
+      device: ./storage/user-data
