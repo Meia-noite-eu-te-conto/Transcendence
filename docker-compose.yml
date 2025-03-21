@@ -122,6 +122,16 @@ services:
     depends_on:
       - db-game
 
+  pung-app:
+    image: node:18-alpine
+    container_name: pung-app
+    command: sh -c "npm run dev"
+    working_dir: /app
+    volumes:
+      - pung-app-files:/app
+    ports:
+      - "3000:3000"
+
   game-worker:
     image: python:3.11
     container_name: game-worker
@@ -150,6 +160,8 @@ services:
     ports:
       - "8080:80"
       - "8443:443"
+    volumes:
+      - front-end-dev:/usr/share/nginx/html/old/
     depends_on:
       - game-core
       - user-session
@@ -157,7 +169,23 @@ services:
   redis:
     image: "redis:latest"
 
-volumes:
+volumes:  
+  front-end-dev:
+    name: front-end-dev
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./Game-Front-End/src
+
+  pung-app-files:
+    name: pung-app-files
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: ./Pung-App/app
+
   game-core-dev:
     name: game-core-dev
     driver: local
