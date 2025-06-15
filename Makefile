@@ -1,10 +1,11 @@
-VOLUMES :=		/goinfre/game-core-dev \
-				/goinfre/user-session-dev \
-				/goinfre/front-end-dev \
-				/goinfre/game-db-data \
-				/goinfre/user-db-data
+VOLUMES :=		~/goinfre/storage/game-data \
+				~/goinfre/storage/user-data \
+				~/goinfre/storage/pung-data
 
-all: run-compose
+all: create-dirs run-compose
+
+create-dirs:
+	sudo mkdir -p $(VOLUMES)
 
 run-compose:
 	docker compose up --build
@@ -27,6 +28,10 @@ fclean:
 	docker compose down
 	docker volume prune -a -f
 	sudo rm -rf $(VOLUMES)
+
+submodule:
+	git submodule init
+	git submodule update
 
 build: mkdir
 	docker compose up --build

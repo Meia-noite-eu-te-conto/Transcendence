@@ -1,0 +1,25 @@
+.features {
+  display: flex;
+  align-items: center;
+  padding: 2rem 0;
+  width: 100%;
+}
+
+.featureSvg {
+  height: 200px;
+  width: 200px;
+}
+
+.list {
+  display: flex; /* Ativa o Flexbox */
+  flex-wrap: wrap; /* Permite que os itens quebrem para uma nova linha se necessário */
+  gap: 2px; /* Espaçamento entre os itens */
+  justify-content: space-evenly; /* Distribui os itens uniformemente */
+  align-items: center; /* Alinha os itens verticalmente */
+  padding: 0;
+  list-style: none; /* Remove os marcadores padrão */
+}
+
+.list li {
+  padding: 2px 4px; /* Espaçamento interno */
+}

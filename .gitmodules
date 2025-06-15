@@ -1,12 +1,12 @@
-[submodule "Game-Front-End"]
-	path = Game-Front-End
-	url = git@github.com:Meia-noite-eu-te-conto/Game-Front-End.git
 [submodule "Game-Core"]
 	path = Game-Core
-	url = git@github.com:Meia-noite-eu-te-conto/Game-Core.git
+	url = git@github.com:ThreeDP/Pung-Game-Core.git
 [submodule "User-Session"]
 	path = User-Session
-	url = git@github.com:Meia-noite-eu-te-conto/User-Serssion.git
-[submodule "Game-BFF"]
-	path = Game-BFF
-	url = git@github.com:Meia-noite-eu-te-conto/Game-BFF.git
+	url = git@github.com:ThreeDP/Pung-User-Session.git
+[submodule "Pung-App"]
+	path = Pung-App
+	url = git@github.com:ThreeDP/trans-app.git
+[submodule "guardian"]
+	path = guardian
+	url = git@github.com:davypaulino/guardian.git

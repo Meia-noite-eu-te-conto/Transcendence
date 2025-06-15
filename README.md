@@ -1,52 +1,48 @@
-# A Pong Game
 
-## Como rodar
+[![Deploy to GitHub Pages](https://github.com/ThreeDP/Pung/actions/workflows/deploy.yml/badge.svg)](https://github.com/ThreeDP/Pung/actions/workflows/deploy.yml)
+[![Markdown para PDF ABNT](https://github.com/ThreeDP/Pung/actions/workflows/deploy-document.yml/badge.svg)](https://github.com/ThreeDP/Pung/actions/workflows/deploy-document.yml)
 
-> [!WARNING] Atenção
-> - Verificar se as pastas de volumes do docker compose para o banco de dados estão criadas.
-> - Verificar o arquivo .env
-> - Verificar se o git submodules funcionou
-> - Aplicar migrations
+# Website
 
-```sh
-make
+This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+
+### Installation
+
+```
+$ yarn
 ```
 
-Reiniciar containers
-```sh
-make att
+### Local Development
+
+```
+$ yarn start
 ```
 
-## Objetivo
+This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
 
-- [Sessões Escolhidas do Projeto](https://tcdmodules.vercel.app/v14.1?state=34341063)
-- [Initial Figma](https://www.figma.com/design/0QqbBQfDFr7xsR6Z1BQ3iX/trancendence-poke?node-id=0-1&t=mro9uy9PyI9rkcJu-1)
+### Build
 
-## Material de Aprendizado
+```
+$ yarn build
+```
 
-`Importante:`<br>
-- [Sincronização multi-player](https://www.gabrielgambetta.com/)
+This command generates static content into the `build` directory and can be served using any static contents hosting service.
 
-`Cursos:`<br>
-- [Freecodecamp HTML + CSS](https://www.freecodecamp.org/learn/responsive-web-design/)
-- [Freecodecamp Javascript](https://www.freecodecamp.org/learn/javascript-algorithms-and-data-structures-v8/)
-- [Freecodecamp Python]()
-- [Freecodecamp Postgresql e Git](https://www.freecodecamp.org/learn/relational-database/)
+### Deployment
 
-`Road Maps:`<br>
-- [Roadmap Server Side Game](https://roadmap.sh/server-side-game-developer)
-- [Roadmap Client Side Game](https://roadmap.sh/game-developer)
-- [Roadmap Postgresql](https://roadmap.sh/postgresql-dba)
-- [Roadmap Javascript](https://roadmap.sh/javascript)
-- [Roadmap Python](https://roadmap.sh/python)
-- [Roadmap Code Review](https://roadmap.sh/code-review)
-- [Roadmap Git and Github](https://roadmap.sh/git-github)
-- [Roadmap Api Design](https://roadmap.sh/api-design)
-- [Roadmap Docker](https://roadmap.sh/docker)
-- [Roadmap Terraform](https://roadmap.sh/terraform)
-- [Roadmap DevOps](https://roadmap.sh/devops)
-- [Roadmap Ux Design](https://roadmap.sh/ux-design)
-- [Roadmap Redis](https://roadmap.sh/redis)
+Using SSH:
 
-## Referências
+```
+$ USE_SSH=true yarn deploy
+```
 
+Not using SSH:
+
+```
+$ GIT_USER=<Your GitHub username> yarn deploy
+```
+
+If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+
+
+[next js codespace problem](https://github.com/vercel/next.js/issues/58019#issuecomment-1795133629)

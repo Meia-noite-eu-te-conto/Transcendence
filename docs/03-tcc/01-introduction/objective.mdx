@@ -1,0 +1,23 @@
+---
+sidebar_position: 2
+---
+
+# 1.1 Objetivo
+
+Este projeto tem como objetivo o desenvolvimento de uma aplicação robusta, e na exploração dos desafios de complexidade que aplicações modulares e síncronas trazem consigo. Conforme discutido por Hare (2017), "a arquitetura de microsserviços permite escalabilidade e facilita a manutenção de sistemas complexos, desde que haja uma abordagem bem planejada para a comunicação entre módulos" (p. 226), o que é fundamental para viabilizar os critérios desejado neste projeto.
+
+Um componente central do projeto é abordar o complexo problema de sincronização em tempo real de múltiplos jogadores, garantindo uma experiência de baixa latência e alta responsividade. Isso é essencial para o jogo proposto.
+
+> Uma vez que "a coordenação precisa e as interações síncronas entre os jogadores são fundamentais em jogos multijogador" (HARE, 2017, p. 225).
+
+> Conforme Hare observa, "em ambientes de múltiplos milhares de jogadores simultâneos, a escalabilidade horizontal e a arquitetura ‘Shared-Nothing’ são indispensáveis para manter a estabilidade do sistema" (HARE, 2017, p. 225), reforçando a necessidade de uma infraestrutura robusta e distribuída.
+
+Pensando na experiência dos jogadores dentro da plataforma os seguintes objetivos específicos foram mapeados:
+
+- **Implementar uma interface intuitiva:** Garantir que o jogo seja fácil de jogar, visualmente agradável e de fácil entendimento pra pessoas com diferentes faixa etária e conhecimento sobre computação.
+- **Buscar assegurar latência e comunicação sincrona:** Utilizar WebSockets ou outra tecnologia adequada para garantir uma sincronização eficiente e baixa latência entre o Backend e os clientes.
+- **Disponibilizar interação sem pares:** Permitir que os jogadores desafiem uma inteligência artificial em partidas individuais.
+- **Implementar Gestão de Partidas por torneios:** Facilitar a organização de torneios entre múltiplos jogadores, possibilitando uma experiência de competição mais estruturada.
+- **Promover escalonamento horizontal:** Dividir o sistema em serviços menores e independentes permitindo escalar serviços conforme demanda.
+- **Segurança do Jogadores:** Garantir a segurança das informações dos jogadores com uso de criptográfia e protocolos como JWT e OAuth.
+- **Estabelecer qualidade mínima dos serviços:** Documentar, versionar e implementar meios que contruibuam para um sistema mais resistente a falhas, integrações menos morosas e melhor integração do time técnico.

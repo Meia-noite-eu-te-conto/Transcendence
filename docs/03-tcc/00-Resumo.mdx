@@ -1,0 +1,21 @@
+---
+sidebar_position: 1
+---
+
+# Resumo
+
+O projeto propõe o desenvolvimento de uma versão moderna do **clássico jogo Pong**, adaptado para partidas e torneios multijogador online em tempo real em navegadores web. Para enfrentar os desafios de um sistema de alta performance e baixa latência, adota-se uma abordagem baseada em microsserviços, utilizando tecnologias como `Python (Django), Golang, JavaScript, TypeScript, Next.js, Docker, PostgreSQL e Redis`. Essa escolha arquitetural, marcada pela diversidade de ferramentas, visa aprofundar o conhecimento técnico e aplicar soluções apropriadas para cada contexto.
+
+> De acordo com (FOWLER; LEWIS, 2014). Uma das principais vantagens no uso de arquitetura de microservices é a capacidade de aproveitar as características específicas de cada tecnologia para diferentes partes do sistema, permitindo um uso mais eficiente dos recursos e uma melhor adaptação às necessidades dos serviços individuais.
+
+Tendo isso em mente esse documento trata de trazer uma visão do contexto geral do sistema e da separação de seus contextos internos de négocio, microserviços, em três pricipais tópicos, permissionamento, sessões de jogadores e sessões de jogos, essa separação permite a evolução de um contexto de négocio sem impactar sistemicamente outra área de négocio, além da definição de recursos, processamente e armazenamento, ou escalonamento lateral, provisionamente de mais containeres, de acordo com a demanda necessária em cada serviço. **[Referência]**
+
+O principal objetivo e desafio deste projeto é garantir uma comunicação síncrona eficiente durante as ações dos jogadores, assegurando baixa latência e resposta em tempo real.
+
+> Estudos de Bernier (2001) destacam que **sincronização e latência são elementos críticos em jogos multiplayer**, pois afetam diretamente a experiência do usuário.
+
+**A arquitetura escolhida se propoem a suportar uma alta carga de usuários simultâneos**, garantindo escalabilidade e estabilidade mesmo em momentos de pico, através de escalonamento lateral, esse projeto se propoe a estudar esses pontos apondados por outros altores de forma prática.
+
+> Como discutido no MOG: Development & Deployment of Multiplayer Online Games, "quando se fala em múltiplos milhares de jogadores simultâneos no mesmo mundo do jogo, não será possível escalar verticalmente e será necessário escalar horizontalmente" (2017, p. 225).
+
+Parte do processo de desenvolvimento do projeto proposto foi destinado a documentação, com ferramentas como `diagram as code`, controle de versão de código, com ferramentas como `git`, e construção de pipelines de deploy e integração, com `Docker, docker-compose e github actions`, o que contribui em grandes proporções para a manuteção, qualidade, e segurança em atividades de desenvolvimento e implantação em ambientes produtivos. **[Referência]**

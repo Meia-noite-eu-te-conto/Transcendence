@@ -1,0 +1,8 @@
+{
+  "label": "Documentação Academica",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Documento academico do projeto."
+  }
+}

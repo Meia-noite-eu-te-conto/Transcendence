@@ -142,7 +142,7 @@ services:
 
   nginx:
     build:
-      context: ./Game-Front-End/nginx/
+      context: load-balance/nginx/
     image: game-front-end:latest
     container_name: game-front-end
     ports:
@@ -157,7 +157,54 @@ services:
   redis:
     image: "redis:latest"
 
+  prometheus:
+    image: prom/prometheus:v2.52.0 # Imagem oficial do Prometheus
+    container_name: prometheus_server
+    ports:
+      - "9090:9090" # Mapeia a porta 9090 do host para a porta 9090 do contêiner
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml # Monta o arquivo de configuração
+      - prometheus_data:/prometheus # Monta um volume para persistir os dados do Prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped # Reinicia automaticamente a menos que seja parado manualmente
+
+  grafana:
+    image: grafana/grafana:11.0.0 # Imagem oficial do Grafana
+    container_name: grafana_server
+    ports:
+      - "3000:3000" # Mapeia a porta 3000 do host para a porta 3000 do contêiner
+    volumes:
+      - grafana_data:/var/lib/grafana # Monta um volume para persistir os dados do Grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/ # Monta as configurações de provisionamento
+    environment: # Variáveis de ambiente para o Grafana
+      - GF_SECURITY_ADMIN_USER=admin # Usuário admin padrão
+      - GF_SECURITY_ADMIN_PASSWORD=admin # Senha admin padrão (MUDAR EM PRODUÇÃO!)
+      - GF_USERS_ALLOW_SIGN_UP=false # Desabilita o registro de novos usuários
+    depends_on: # Garante que o Prometheus seja iniciado antes do Grafana
+      - prometheus
+    restart: unless-stopped
+
+  # Opcional: Adicionar um Node Exporter para monitorar o host Docker
+  nodeexporter:
+    image: prom/node-exporter:v1.8.1 # Imagem oficial do Node Exporter
+    container_name: node_exporter_host
+    ports:
+      - "9100:9100" # Mapeia a porta 9100 do host para a porta 9100 do contêiner
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/host/rootfs'
+    restart: unless-stopped
+
 volumes:
+  prometheus_data:
+  grafana_data:
   game-core-dev:
     name: game-core-dev
     driver: local

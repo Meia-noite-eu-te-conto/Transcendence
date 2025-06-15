@@ -1,0 +1,71 @@
+---
+sidebar_position: 2
+---
+
+# 🚀 Executar Localmente  
+Clone o projeto **[Pung](https://github.com/ThreeDP/Pung)** para começarmos.  
+
+## 🔧 **Pré-requisitos**  
+Antes de iniciar, certifique-se de ter as seguintes ferramentas instaladas no seu sistema:  
+
+✅ **Docker** – Plataforma de contêineres para virtualização leve. ([Instalar Docker](https://docs.docker.com/get-docker/))  
+✅ **Docker Compose** – Orquestração de múltiplos contêineres. ([Instalar Docker Compose](https://docs.docker.com/compose/install/))  
+
+💡 **Alternativa:** Caso prefira utilizar **Podman**, também é possível executar os contêineres com **Podman Compose**. ([Instalar Podman](https://podman.io/getting-started/))  
+
+---
+
+## 🖥️ **Ambiente Windows**  
+Para configurar o ambiente corretamente no **Windows**, siga os passos abaixo:  
+
+### 🔄 **Sincronizar os repositórios necessários**  
+```bash
+git submodule init
+git submodule update
+```
+
+### 🚀 **Subir os projetos com Docker Compose**  
+```bash
+docker compose up --build
+```
+
+💡 Se estiver utilizando **Podman**, execute:  
+```bash
+podman-compose up --build
+```
+
+---
+
+## 🐧 **Ambiente Linux**  
+No **Linux** existe um arquivo `Makefile` configurando para realizar os processo utilizando `Docker`.
+
+```bash
+make submodules
+```
+
+### 🚀 **Subir os contêineres**  
+```bash
+make
+```
+
+### 🔹 **Remover todos os contêineres parados:**  
+```bash
+make fclean
+```
+
+---
+
+## 🛠️ **Dicas Extras**  
+🔹 **Verificar status dos contêineres:**  
+```bash
+docker ps -a
+podman ps -a  # Se estiver usando Podman
+```
+
+🔹 **Logs do serviço para debugging:**  
+```bash
+docker logs <nome-do-container>
+podman logs <nome-do-container>  # Para Podman
+```
+
+---

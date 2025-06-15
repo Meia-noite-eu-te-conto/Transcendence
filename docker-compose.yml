@@ -1,21 +1,30 @@
-version: '3'
 secrets:
   secrets_env:
     file: .env
 
 services:
-
-  db-user:
+  pung-db:
     image: postgres:16-alpine
-    container_name: db-user-session
+    container_name: pung-db
     restart: always
     shm_size: 128mb
+    ports:
+      - "5432:5432"
     environment:
-      POSTGRES_USER: "${USER_SESSION_POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${USER_SESSION_POSTGRES_PASSWORD}"
-      POSTGRES_DB: "${USER_SESSION_POSTGRES_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      GAME_CORE_DB: "${GAME_CORE_DB}"
+      GAME_CORE_DB_USER: "${GAME_CORE_DB_USER}"
+      GAME_CORE_DB_PASS: "${GAME_CORE_DB_PASS}"
+      GUARDIAN_DB: "${GUARDIAN_DB}"
+      GUARDIAN_DB_USER: "${GUARDIAN_DB_USER}"
+      GUARDIAN_DB_PASS: "${GUARDIAN_DB_PASS}"
+      USER_SESSION_DB: "${USER_SESSION_DB}"
+      USER_SESSION_DB_USER: "${USER_SESSION_DB_USER}" 
+      USER_SESSION_DB_PASS: "${USER_SESSION_DB_PASS}"
     volumes:
-      - user-db-data:/var/lib/postgresql/data
+      - ./database/init-database.sh:/docker-entrypoint-initdb.d/init-database.sh
+      - pung-db-data:/var/lib/postgresql/data
     secrets:
       - secrets_env
 
@@ -25,35 +34,54 @@ services:
     command: sh -c "pip install -r requirements.txt && python manage.py migrate"
     working_dir: /app
     environment:
-      DB_NAME: "${USER_SESSION_POSTGRES_DB}"
-      DB_USER: "${USER_SESSION_POSTGRES_USER}"
-      DB_PASSWORD: "${USER_SESSION_POSTGRES_PASSWORD}"
-      DB_HOST: "db-user-session"
+      DB_NAME: "${USER_SESSION_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
       DB_PORT: "5432"
     volumes:
       - user-session-dev:/app
     depends_on: 
-      - db-user
+      - pung-db
+
+  game-core-migrate:
+    image: python:3.11
+    container_name: game-core-migrate
+    command: sh -c "pip install -r requirements.txt && python manage.py migrate"
+    working_dir: /app
+    environment:
+      DB_NAME: "${GAME_CORE_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
+      DB_PORT: "5432"
+    volumes:
+      - game-core-dev:/app
+    depends_on:
+      - pung-db
 
   user-session:
     image: python:3.11
     container_name: user-session
-    command: sh -c "pip install -r requirements.txt && uvicorn session.asgi:application --host 0.0.0.0 --port 8002 --reload"
+    command: sh -c "pip install --no-cache-dir -r requirements.txt && python manage.py migrate && uvicorn session.asgi:application --host 0.0.0.0 --port 8002 --reload"
     working_dir: /app
     volumes:
       - user-session-dev:/app
     environment:
-      DB_NAME: "${USER_SESSION_POSTGRES_DB}"
-      DB_USER: "${USER_SESSION_POSTGRES_USER}"
-      DB_PASSWORD: "${USER_SESSION_POSTGRES_PASSWORD}"
-      DB_HOST: "db-user-session"
+      DB_NAME: "${USER_SESSION_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
       DB_PORT: "5432"
       REDIS_HOST: "${REDIS_HOST}"
       REDIS_PORT: "${REDIS_PORT}"
+      JWT_SIGNING_KEY: "${ACCESS_TOKEN_SECRET}"
     depends_on:
+      - pung-db
       - user-session-migrate
-      - db-user
       - redis
+    expose:
+      - '8002'
 
   game-sync-session-worker:
     image: python:3.11
@@ -63,46 +91,18 @@ services:
     volumes:
       - user-session-dev:/app
     environment:
-      DB_NAME: "${USER_SESSION_POSTGRES_DB}"
-      DB_USER: "${USER_SESSION_POSTGRES_USER}"
-      DB_PASSWORD: "${USER_SESSION_POSTGRES_PASSWORD}"
-      DB_HOST: "db-user-session"
+      DB_NAME: "${USER_SESSION_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
       DB_PORT: "5432"
       REDIS_HOST: "${REDIS_HOST}"
       REDIS_PORT: "${REDIS_PORT}"
+      JWT_SIGNING_KEY: "${ACCESS_TOKEN_SECRET}"
     depends_on:
-      - user-session
+      - pung-db
+      - user-session-migrate
       - redis
-
-  db-game:
-    image: postgres:16-alpine
-    container_name: db-game-core
-    restart: always
-    shm_size: 128mb
-    environment:
-      POSTGRES_USER: "${CORE_GAME_POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${CORE_GAME_POSTGRES_PASSWORD}"
-      POSTGRES_DB: "${CORE_GAME_POSTGRES_DB}"
-    volumes:
-      - game-db-data:/var/lib/postgresql/data
-    secrets:
-      - secrets_env
-
-  game-core-migrate:
-    image: python:3.11
-    container_name: game-core-migrate
-    command: sh -c "pip install -r requirements.txt && python manage.py migrate"
-    working_dir: /app
-    environment:
-      DB_NAME: "${CORE_GAME_POSTGRES_DB}"
-      DB_USER: "${CORE_GAME_POSTGRES_USER}"
-      DB_PASSWORD: "${CORE_GAME_POSTGRES_PASSWORD}"
-      DB_HOST: "db-game-core"
-      DB_PORT: "5432"
-    volumes:
-      - game-core-dev:/app
-    depends_on: 
-      - db-game
 
   game-core:
     image: python:3.11
@@ -112,15 +112,19 @@ services:
     volumes:
       - game-core-dev:/app
     environment:
-      DB_NAME: "${CORE_GAME_POSTGRES_DB}"
-      DB_USER: "${CORE_GAME_POSTGRES_USER}"
-      DB_PASSWORD: "${CORE_GAME_POSTGRES_PASSWORD}"
-      DB_HOST: "db-game-core"
+      DB_NAME: "${GAME_CORE_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
       DB_PORT: "5432"
       REDIS_HOST: "${REDIS_HOST}"
       REDIS_PORT: "${REDIS_PORT}"
     depends_on:
-      - db-game
+      - game-core-migrate
+      - pung-db
+      - redis
+    expose:
+      - '8001'
 
   game-worker:
     image: python:3.11
@@ -130,32 +134,154 @@ services:
     volumes:
       - game-core-dev:/app
     environment:
-      DB_NAME: "${CORE_GAME_POSTGRES_DB}"
-      DB_USER: "${CORE_GAME_POSTGRES_USER}"
-      DB_PASSWORD: "${CORE_GAME_POSTGRES_PASSWORD}"
-      DB_HOST: "db-game-core"
+      DB_NAME: "${GAME_CORE_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
       DB_PORT: "5432"
       REDIS_HOST: "${REDIS_HOST}"
       REDIS_PORT: "${REDIS_PORT}"
     depends_on:
-      - game-core
+      - game-core-migrate
+      - pung-db
       - redis
+
+  guardian:
+    image: golang:1.24.1-alpine
+    container_name: guardian
+    command: sh -c "go build && /app/guardian"
+    working_dir: /app
+    volumes:
+      - guardian-files:/app
+    environment:
+      DB_NAME: "${GUARDIAN_DB}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DB_HOST: "pung-db"
+      DB_PORT: "5432"
+      SERVER_PORT: '8003'
+      METRICS_PORT: '9015'
+      AUTH_GITHUB_KEY: "${AUTH_GITHUB_KEY}"
+      AUTH_GITHUB_SECRET: "${AUTH_GITHUB_SECRET}"
+      AUTH_GOOGLE_KEY: "${AUTH_GOOGLE_KEY}"
+      AUTH_GOOGLE_SECRET=: "${AUTH_GOOGLE_SECRET}"
+      SESSION_SECRET: "${SESSION_SECRET}"
+      ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+      REFRESH_TOKEN_SECRET: "${REFRESH_TOKEN_SECRET}"
+      REDIRECT_URL: "${REDIRECT_URL}"
+      DD_AGENT_HOST: datadog-agent
+      DD_TRACE_AGENT_HOSTNAME: datadog-agent
+      DD_SERVICE: guardian-auth
+      DD_ENV: development
+      DD_VERSION: 1.0.0
+    depends_on:
+      - game-core-migrate
+      - pung-db
+      - redis
+    expose:
+      - "9015"
+
+  pung-app:
+    build:
+      context: ./Pung-App/app/
+      dockerfile: ./Dockerfile-prod
+      args:
+        NEXT_PUBLIC_RESOURCE_HTTP_GAME_CORE: "${RESOURCE_HTTP_GAME_CORE}"
+        NEXT_PUBLIC_RESOURCE_WS_GAME_CORE: "${RESOURCE_WS_GAME_CORE}"
+        NEXT_PUBLIC_RESOURCE_HTTP_USER: "${RESOURCE_HTTP_USER}"
+        NEXT_PUBLIC_RESOURCE_WS_USER: "${RESOURCE_WS_USER}"
+        NEXT_PUBLIC_RESOURCE_HTTP_AUTH: "${RESOURCE_HTTP_AUTH}"
+        NEXT_PUBLIC_RESOURCE_WS_AUTH: "${RESOURCE_WS_AUTH}"
+    image: pung-app:18-alpine
+    container_name: pung-app
+    working_dir: /app
+    environment:
+      SESSION_SECRET_KEY: "${ACCESS_TOKEN_SECRET}"
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+      NEXT_PUBLIC_RESOURCE_HTTP_GAME_CORE: "${RESOURCE_HTTP_GAME_CORE}"
+      NEXT_PUBLIC_RESOURCE_WS_GAME_CORE: "${RESOURCE_WS_GAME_CORE}"
+      NEXT_PUBLIC_RESOURCE_HTTP_USER: "${RESOURCE_HTTP_USER}"
+      NEXT_PUBLIC_RESOURCE_WS_USER: "${RESOURCE_WS_USER}"
+      NEXT_PUBLIC_RESOURCE_HTTP_AUTH: "${RESOURCE_HTTP_AUTH}"
+      NEXT_PUBLIC_RESOURCE_WS_AUTH: "${RESOURCE_WS_AUTH}"
+    ports:
+      - "3001:3000"
+    expose:
+      - "3000"
 
   nginx:
     build:
-      context: ./Game-Front-End/
+      context: ./load-balance/
       dockerfile: ./nginx/Dockerfile
-    image: game-front-end:latest
-    container_name: game-front-end
+    image: load-balance:latest
+    container_name: load-balance
     ports:
-      - "8080:80"
       - "8443:443"
     depends_on:
+      - pung-app
+      - guardian
       - game-core
       - user-session
-  
+
   redis:
     image: "redis:latest"
+
+  datadog-agent:
+    image: datadog/agent:latest
+    container_name: datadog-agent
+    environment:
+      DD_API_KEY: "${DD_API_KEY}"
+      DD_APP_KEY: "${DD_APP_KEY}"
+      DD_SITE: "${DD_SITE}"
+      DD_HOST_NAME: "pung-compose-stack"
+      DD_LOGS_ENABLED: "true"
+      DD_APM_ENABLED: "true"
+      DD_APM_NON_LOCAL_TRAFFIC: "true"
+      DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL: true
+      DD_CONTAINER_EXCLUDE: "name:datadog-agent"
+      # Adicione esta variável para informar ao agente que está em Podman
+      DD_CONTAINER_RUNTIME: docker # Ou crio, ou docker (se estiver rodando o Docker no Podman)
+      DD_CGROUP_DRIVER: systemd # Comum para Podman em sistemas com systemd
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+
+    volumes:
+      # --- MUDANÇAS AQUI PARA PODMAN ---
+      # 1. Socket do Podman:
+      #    Geralmente é montado assim para acesso ao Podman API
+      #    ou se você usa 'podman-compose' ele pode expor um socket Docker compatível
+      - /run/podman/podman.sock:/var/run/docker.sock:ro # Mais comum para Podman
+      # OU, se você tiver um socket Docker compatível exposto pelo Podman:
+      # - /var/run/docker.sock:/var/run/docker.sock:ro
+
+      # 2. Cgroups:
+      #    Pode precisar de ajustes dependendo da sua configuração de cgroup no Podman.
+      #    A montagem padrão já é "/sys/fs/cgroup/", mas o caminho do host pode variar.
+      #    Muitas vezes, com Podman, o path correto para o host é /sys/fs/cgroup ou uma montagem específica do Podman.
+      #    Essa linha original já deve ser suficiente, mas fique atento se tiver problemas.
+      - /sys/fs/cgroup/:/host/sys/fs/cgroup/:ro
+
+      # --- Mantenha estas as mesmas ---
+      - /proc/:/host/proc/:ro
+      - /etc/passwd:/etc/passwd:ro
+      - ./datadog/conf.d:/etc/datadog-agent/conf.d:ro
+      - ./datadog/logs:/var/log/datadog:rw
+      - ./datadog/integrations:/etc/datadog-agent/integrations.d:ro
+
+    ports:
+      - "8126:8126/tcp"
+      - "8125:8125/udp"
+
+    depends_on:
+      - pung-db
+      - user-session
+      - game-core
+      - guardian
+      - redis
+      - pung-app
+      - nginx
+
+    restart: unless-stopped
 
 volumes:
   game-core-dev:
@@ -164,7 +290,7 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ./Game-Core/src
+      device: /mnt/c/me/pung/Game-Core/src
 
   user-session-dev:
     name: user-session-dev
@@ -172,20 +298,20 @@ volumes:
     driver_opts:
       o: bind
       type: none
-      device: ./User-Session/src
+      device: /mnt/c/me/pung/User-Session/src
 
-  game-db-data:
-    name: game-db-data
+  guardian-files:
+    name: guardian-files
     driver: local
     driver_opts:
-      o: 'bind'
-      type: 'none'
-      device: '~/goinfre/storage/game-data'
+      o: bind
+      type: none
+      device: /mnt/c/me/pung/guardian/
 
-  user-db-data:
-    name: user-db-data
-    driver: local
-    driver_opts:
-      o: 'bind'
-      type: 'none'
-      device: '~/goinfre/storage/user-data'
+  pung-db-data:
+    name: pung-db-data
+#    driver: local
+#    driver_opts:
+#      o: 'bind'
+#      type: 'none'
+#      device: /mnt/c/me/pung/storage/pung-data

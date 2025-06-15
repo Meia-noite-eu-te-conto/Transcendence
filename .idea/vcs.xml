@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Game-Core" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/Pung-App" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/User-Session" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/guardian" vcs="Git" />
+  </component>
+</project>

@@ -1,0 +1,13 @@
+threedp:
+  name: Davy Paulino
+  title: Back End Engineer @Ticket
+  url: https://davypaulino.me
+  image_url: https://github.com/ThreeDP.png
+  page:
+    # customize the url of the author page at /blog/authors/<permalink>
+    permalink: '/davy-paulino'
+  socials:
+    linkedin: davypaulino
+    github: ThreeDP
+    leetcode: https://leetcode.com/u/DavyPaulino
+    site: https://davypaulino.me
