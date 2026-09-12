@@ -64,11 +64,16 @@ padrão é você mesmo fazer o trabalho com suas ferramentas.
 
 ## Armadilhas conhecidas
 
-- `Game-Core`, `User-Session`, `Game-BFF` e `Game-Front-End` são **git submodules**.
-  Editar dentro deles altera outro repositório. Enquanto a consolidação em monorepo
-  (ADR-0003) não acontecer, confirme em qual repositório você está commitando.
-- `Game-BFF` é uma casca vazia: `README.md` vazio, dois `Dockerfile` vazios. O papel
-  de BFF descrito no C4 nunca foi implementado; o nginx faz o proxy hoje.
+- `Game-Core`, `User-Session` e `Game-Front-End` são **git submodules**. Editar dentro
+  deles altera outro repositório. Enquanto a consolidação em monorepo (ADR-0003) não
+  acontecer, confirme em qual repositório você está commitando.
+- **O pin do submodule precisa apontar para um commit que exista no remoto**, e de
+  preferência para uma tag `vX.Y.Z` — o workflow de integração deriva a versão da
+  imagem do pin, e falha se ele não tiver tag. Um pin apontando para commit só local
+  quebra o `checkout` do CI (foi o que aconteceu com o `Game-BFF`, removido em
+  2026-09-12).
+- O papel de BFF descrito no C4 nunca foi implementado — existia um submodule
+  `Game-BFF` com arquivos de 0 byte, já removido. O papel vira o `gateway` em Go.
 - Os serviços Python **não têm Dockerfile**. O compose usa a imagem `python:3.11` e
   roda `pip install` no start, com bind mount em `/goinfre/...`. Build não é
   reproduzível e o primeiro boot é lento. Não é bug seu se o ambiente demorar.

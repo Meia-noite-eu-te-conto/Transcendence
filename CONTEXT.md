@@ -8,7 +8,6 @@ Orientação de 5 minutos sobre o repositório inteiro. Cada projeto tem o seu p
 | `Game-Front-End` | [CONTEXT](Game-Front-End/CONTEXT.md) | SPA em JS puro + renderer WebGL2 + nginx |
 | `User-Session` | [CONTEXT](User-Session/CONTEXT.md) | Django — salas, jogadores, torneio, orquestração |
 | `Game-Core` | [CONTEXT](Game-Core/CONTEXT.md) | Django — simulação do jogo, WS, ranking |
-| `Game-BFF` | [CONTEXT](Game-BFF/CONTEXT.md) | casca vazia; papel de BFF nunca implementado |
 
 Guias transversais: [AGENTS.md](AGENTS.md) (regras de engenharia),
 [CLAUDE.md](CLAUDE.md), [docs/migration/](docs/migration/) (análise, alvo, ondas),
@@ -26,7 +25,7 @@ portado ([decisão D3](docs/migration/06-roadmap.md#decisões-resolvidas)).
 
 ## Como está organizado
 
-Repositório raiz com **4 git submodules**. Editar dentro de uma pasta de projeto
+Repositório raiz com **3 git submodules**. Editar dentro de uma pasta de projeto
 altera outro repositório — confirme onde está commitando.
 
 ```
@@ -34,7 +33,6 @@ Transcendence/              ← este repositório: compose, Makefile, docs
 ├── Game-Front-End/         ← submodule
 ├── User-Session/           ← submodule
 ├── Game-Core/              ← submodule
-├── Game-BFF/               ← submodule (vazio)
 ├── docker-compose.yml      ← 9 containers
 ├── docker-compose-prod.yml
 ├── Makefile
@@ -86,5 +84,6 @@ Próximos passos com dependências: [docs/migration/06-roadmap.md](docs/migratio
    `LPOP` num laço de 1 segundo, sem ack. Partida perdida não deixa rastro.
 2. **Não existe autenticação.** A identidade é um UUID em `localStorage` mandado no
    header `X-User-Id`, e o WebSocket de sala aceita `?userId=` sem verificar.
-3. **`Game-BFF` é uma pasta com arquivos vazios.** O C4 em `docs/` descreve um BFF que
-   nunca foi escrito; o nginx faz o proxy.
+3. **O BFF do C4 nunca existiu.** O diagrama em `docs/` descreve um BFF que nunca foi
+   escrito — havia um submodule `Game-BFF` com arquivos de 0 byte, removido em
+   2026-09-12. O papel dele vira o serviço `gateway` em Go; o nginx faz o proxy hoje.

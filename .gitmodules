@@ -7,6 +7,3 @@
 [submodule "User-Session"]
 	path = User-Session
 	url = https://github.com/Meia-noite-eu-te-conto/User-Session.git
-[submodule "Game-BFF"]
-	path = Game-BFF
-	url = https://github.com/Meia-noite-eu-te-conto/Game-BFF.git

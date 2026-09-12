@@ -205,7 +205,7 @@ fechar e rode ao lado das ondas 1–3.
 
 | ID | Tarefa | Tam | Depende | Pronto quando |
 | --- | --- | --- | --- | --- |
-| **T5.1** | Remover `legacy/`, containers de migration, volumes `/goinfre`, `Game-BFF` vazio | P | T3.15, T4.12 | nenhuma referência a Django ou à SPA antiga no repositório |
+| **T5.1** | Remover `legacy/`, containers de migration, volumes `/goinfre` | P | T3.15, T4.12 | nenhuma referência a Django ou à SPA antiga no repositório |
 | **T5.2** | Atualizar o C4 em `docs/0-context/` e `docs/1-container/` | P | T5.1 | o diagrama descreve o que existe, não a intenção de 2024 |
 | **T5.3** | Popular `manifests/` (hoje vazio) com o deploy alvo | M | T5.1, D5 | conforme a decisão D5 |
 

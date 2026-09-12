@@ -114,7 +114,7 @@ Roda em paralelo desde a Onda 1 (não depende de back-end Go) e corta no fim.
 
 ### Onda 5 — Desmonte
 Remover `legacy/`, os containers de migration do Django, os volumes `/goinfre`,
-o `.env` commitado (rotacionando as senhas), e o `Game-BFF` vazio. Atualizar o C4 em
+e o `.env` commitado (rotacionando as senhas). Atualizar o C4 em
 `docs/` para refletir o que passou a existir.
 
 ## 3. Progresso
@@ -168,6 +168,7 @@ uma estão em [06-roadmap.md](06-roadmap.md).
 | 4 | features (ranking→lobby→room→tournament→game) | — |
 | 4 | corte do front-end | — |
 | 5 | `legacy/` removido | — |
+| — | submodule `Game-BFF` (casca vazia) removido | ✅ 2026-09-12 |
 | 5 | segredos rotacionados | — |
 | 5 | C4 atualizado | — |
 
