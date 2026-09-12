@@ -5,6 +5,16 @@
 # redirecionamento e a UI não abre. Com `insecure`, o servidor fala HTTP puro
 # e quem termina TLS é o ingress-nginx (ver 20-ingress.yaml) — o tráfego
 # continua cifrado do navegador até o Ingress.
+#
+# `reposerver.enable.git.submodule: "false"` também é obrigatório aqui, não
+# opcional. Por padrão o repo-server roda `git submodule update --init
+# --recursive` ao clonar, mesmo quando o Application só observa `manifests/`
+# (YAML puro, sem depender de nenhum submodule). Este repositório declara os
+# submodules do jogo (Game-Core, Game-Front-End, User-Session) com URL SSH, e
+# o repo-server não tem chave configurada — o clone falha com "Permission
+# denied (publickey)" e o Application trava em SYNC STATUS Unknown
+# (ComparisonError). Desabilitar submodule globalmente é seguro: nenhum
+# Application deste cluster precisa do conteúdo de um submodule.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -15,3 +25,4 @@ metadata:
     app.kubernetes.io/part-of: argocd
 data:
   server.insecure: "true"
+  reposerver.enable.git.submodule: "false"
