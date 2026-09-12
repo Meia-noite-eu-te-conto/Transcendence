@@ -40,7 +40,7 @@ spec:
         - name: github-registry
       containers:
         - name: nginx
-          image: ghcr.io/davypaulino/pong-front-end:v2.0.0
+          image: ghcr.io/davypaulino/pong-front-end:v2.0.1
           ports:
             - name: http
               containerPort: 80
