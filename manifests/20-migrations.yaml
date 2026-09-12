@@ -32,7 +32,7 @@ spec:
             limits:   { cpu: 100m, memory: 64Mi }
       containers:
         - name: migrate
-          image: ghcr.io/davypaulino/pong-user-session:v0.1.0
+          image: ghcr.io/davypaulino/pong-user-session:v2.0.0
           command: ["python", "manage.py", "migrate", "--noinput"]
           env:
             - name: DB_NAME
@@ -43,6 +43,8 @@ spec:
               valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_DB_PASSWORD } }
             - name: SECRET_KEY
               valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_SECRET_KEY } }
+            - name: JWT_SIGNING_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: JWT_SIGNING_KEY } }
           envFrom:
             - configMapRef: { name: pong-config }
           resources:
@@ -79,7 +81,7 @@ spec:
             limits:   { cpu: 100m, memory: 64Mi }
       containers:
         - name: migrate
-          image: ghcr.io/davypaulino/pong-game-core:v0.1.0
+          image: ghcr.io/davypaulino/pong-game-core:v2.0.0
           command: ["python", "manage.py", "migrate", "--noinput"]
           env:
             - name: DB_NAME

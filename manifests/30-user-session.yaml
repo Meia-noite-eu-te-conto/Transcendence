@@ -40,7 +40,7 @@ spec:
         - name: github-registry
       containers:
         - name: user-session
-          image: ghcr.io/davypaulino/pong-user-session:v0.1.0
+          image: ghcr.io/davypaulino/pong-user-session:v2.0.0
           command:
             - uvicorn
             - session.asgi:application
@@ -60,6 +60,8 @@ spec:
               valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_DB_PASSWORD } }
             - name: SECRET_KEY
               valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_SECRET_KEY } }
+            - name: JWT_SIGNING_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: JWT_SIGNING_KEY } }
           envFrom:
             - configMapRef: { name: pong-config }
           # Sonda TCP porque o legado NÃO tem endpoint de saúde. Depois da TK.1,

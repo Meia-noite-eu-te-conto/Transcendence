@@ -40,7 +40,7 @@ spec:
         - name: github-registry
       containers:
         - name: game-core
-          image: ghcr.io/davypaulino/pong-game-core:v0.1.0
+          image: ghcr.io/davypaulino/pong-game-core:v2.0.0
           command:
             - uvicorn
             - game_project.asgi:application

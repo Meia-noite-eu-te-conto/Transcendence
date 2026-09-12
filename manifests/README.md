@@ -14,11 +14,20 @@ Contexto: [docs/deploy/](../docs/deploy/) · Tarefas: [Onda 0-K](../docs/migrati
 
 Estes manifests **não funcionam** sem eles. Não é opcional, é bloqueio:
 
-1. **As imagens precisam existir.** Os `Dockerfile` e os workflows de publicação já
-   estão prontos nos três repositórios, e as imagens constroem. Falta publicar: crie o
-   secret de organização `GHCR_TOKEN` (PAT clássico com `write:packages`) e empurre um
-   tag `v0.1.0` em cada repositório. Isso produz
-   `ghcr.io/davypaulino/pong-{user-session,game-core,front-end}:v0.1.0`.
+1. **As imagens existem, em `v2.0.0`.** Publicadas em 2026-09-12 pelos workflows, a
+   partir da tag `v2.0.0` de cada repositório — os três runs concluíram com sucesso,
+   smoke test incluído.
+
+   | Imagem | Tag | Commit |
+   | --- | --- | --- |
+   | `pong-user-session` | `v2.0.0` | `f27feb5` |
+   | `pong-game-core` | `v2.0.0` | `d1af81b` |
+   | `pong-front-end` | `v2.0.0` | `fec7b7d` |
+
+   Cada push de tag também gera `2.0.0` (sem o `v`) e a tag de SHA curto, que serve de
+   alternativa imutável caso `v2.0.0` seja algum dia movida.
+
+   **Os pacotes são privados**, então o pull secret não é opcional.
 2. **O secret de pull.** `github-registry` existe só no namespace `prod`; secret é
    namespaced. Copie para `pong` — o comando está em `02-secret.example.yaml`.
 3. **`pong-secrets`.** Criado à mão a partir do `.env.local`, com senhas e `SECRET_KEY`
