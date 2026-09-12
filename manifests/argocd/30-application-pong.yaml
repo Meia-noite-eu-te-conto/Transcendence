@@ -1,0 +1,67 @@
+# O Application que faz o Argo CD observar este repositório e sincronizar o
+# namespace `pong` — o "CD" do fluxo:
+#
+#   integration.yml passa o k6  →  commit em manifests/  →  Argo sincroniza
+#
+# Deliberadamente NÃO usamos o Argo CD Image Updater, que observaria o registry
+# e promoveria assim que uma imagem nova aparecesse. Isso pularia o teste de
+# integração — exatamente o gate que se quer ter. Aqui o git é a única fonte:
+# só entra no cluster o que o CI escreveu depois de testar.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pong
+  namespace: argocd
+  finalizers:
+    # Sem isso, apagar o Application deixa os recursos órfãos no cluster.
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Meia-noite-eu-te-conto/Transcendence.git
+    targetRevision: main
+    path: manifests
+    directory:
+      recurse: false
+      # `examples/` guarda o template de secret com valores "TROCAR" — se o
+      # Argo o aplicasse, sobrescreveria o secret real e derrubaria tudo.
+      # `argocd/` é a própria instalação do Argo: não deve ser gerenciada por
+      # este Application (auto-gerência dificulta recuperar de erro).
+      # recurse: false já exclui subdiretórios, e o exclude é cinto e
+      # suspensório — se alguém ligar recurse, continua protegido.
+      exclude: "{examples/**,argocd/**}"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pong
+
+  syncPolicy:
+    automated:
+      # selfHeal: corrige mudança feita à mão no cluster, voltando ao git.
+      selfHeal: true
+      # prune: FALSE de propósito. Remover um arquivo do git passaria a apagar
+      # o recurso no cluster — inclusive PVC do Postgres, cujo reclaim é
+      # Delete. Prune automático aqui é perda de dado. Remoção deve ser feita
+      # à mão, com intenção.
+      prune: false
+    syncOptions:
+      # O namespace `pong` e os secrets foram criados à mão (secrets nunca
+      # entram no git). O Argo não deve tentar criar nem gerenciá-los.
+      - CreateNamespace=false
+      # Aplica em ordem de dependência lógica em vez de alfabética pura.
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+
+  # Postgres e Redis são StatefulSet com PVC: o Argo não deve ficar
+  # "OutOfSync" por causa de campo que o próprio Kubernetes preenche.
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/volumeClaimTemplates

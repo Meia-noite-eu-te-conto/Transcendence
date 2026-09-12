@@ -144,8 +144,8 @@ uma estão em [06-roadmap.md](06-roadmap.md).
 | 0-K | workers com replicas 1 + Recreate | — |
 | 0-K | Ingress `pong.homelab` com WebSocket | — |
 | 0-K | requests/limits em todo workload | — |
-| 0-K | validação ponta a ponta no cluster | — |
-| 0-K | dashboard no Grafana | — |
+| 0-K | validação ponta a ponta no cluster | ✅ 2026-09-12 — TK.12 completa; achou e corrigiu roteamento (v2.0.1) e contrato de rooms (v2.0.2) |
+| 0-K | dashboard no Grafana | — (portão fechado sem isso; fica pendente) |
 | 1 | `services/stats` (scaffold) | — |
 | 1 | ranking portado + paridade | — |
 | 1 | histórico de torneio portado + paridade | — |

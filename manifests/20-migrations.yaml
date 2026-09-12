@@ -1,12 +1,22 @@
 # Migrations como Job, não como initContainer da API: rodar `migrate` em cada réplica
 # que sobe é desperdício na melhor hipótese e corrida na pior.
-# Reaplicar: apague o Job antes (`kubectl delete job -n pong migrate-user-session`),
-# porque Job é imutável.
+#
+# Anotados como hook PreSync do Argo CD. Isso resolve duas coisas ao mesmo tempo:
+#  · Job é imutável — sem hook, o segundo sync falharia com "field is immutable",
+#    porque o Argo tentaria atualizar um Job existente em vez de recriá-lo;
+#  · migration precisa rodar ANTES dos Deployments subirem com a imagem nova.
+# `BeforeHookCreation` apaga o Job da execução anterior antes de criar o novo.
+#
+# Aplicando à mão (sem Argo), apague o Job antes de reaplicar:
+#   kubectl delete job -n pong migrate-user-session migrate-game-core
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: migrate-user-session
   namespace: pong
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 4
@@ -56,6 +66,9 @@ kind: Job
 metadata:
   name: migrate-game-core
   namespace: pong
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 4

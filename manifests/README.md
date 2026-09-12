@@ -29,9 +29,9 @@ Estes manifests **não funcionam** sem eles. Não é opcional, é bloqueio:
 
    **Os pacotes são privados**, então o pull secret não é opcional.
 2. **O secret de pull.** `github-registry` existe só no namespace `prod`; secret é
-   namespaced. Copie para `pong` — o comando está em `02-secret.example.yaml`.
+   namespaced. Copie para `pong` — o comando está em `examples/secret.example.yaml`.
 3. **`pong-secrets`.** Criado à mão a partir do `.env.local`, com senhas e `SECRET_KEY`
-   **novas**. Ver `02-secret.example.yaml`. Atenção ao `JWT_SIGNING_KEY`: ele é segredo
+   **novas**. Ver `examples/secret.example.yaml`. Atenção ao `JWT_SIGNING_KEY`: ele é segredo
    **compartilhado com quem emite os tokens** (`settings.py` diz "USE A CHAVE EXATA DA
    API EXTERNA"), então não gere um valor aleatório — use o mesmo que já está em uso.
 
@@ -90,10 +90,10 @@ O prefixo numérico é a ordem. Dentro de cada faixa, a ordem não importa.
 | --- | --- |
 | `00-namespace.yaml` | namespace `pong` |
 | `01-configmap.yaml` | config dos serviços + `nginx.conf` do front-end |
-| `02-secret.example.yaml` | **template** — não aplique; crie o secret pelo comando de dentro |
+| `examples/secret.example.yaml` | **template** — fora do que o Argo sincroniza; crie o secret pelo comando de dentro |
 | `10-postgres.yaml` | StatefulSet, PVC 5 Gi, script de init com os 2 bancos |
 | `11-redis.yaml` | StatefulSet, PVC 1 Gi, `appendonly` |
-| `20-migrations.yaml` | 2 `Job` de `manage.py migrate` |
+| `20-migrations.yaml` | 2 `Job` de `manage.py migrate`, anotados como hook `PreSync` do Argo |
 | `30-user-session.yaml` | Deployment + Service :8002 |
 | `31-game-core.yaml` | Deployment + Service :8001 |
 | `40-workers.yaml` | `game-worker` e `session-worker` — **singletons** |
@@ -122,8 +122,14 @@ kubectl apply -f manifests/40-workers.yaml -f manifests/50-front-end.yaml
 kubectl apply -f manifests/60-ingress.yaml
 ```
 
-`02-secret.example.yaml` não entra em `kubectl apply -f manifests/` — mova-o para fora
-ou aplique arquivo por arquivo. Aplicá-lo sobrescreve o secret real com `TROCAR`.
+O template de secret vive em `examples/`, fora do que o Argo CD sincroniza — aplicá-lo
+sobrescreveria o secret real com `TROCAR`.
+
+**GitOps:** quem aplica `manifests/` no cluster passa a ser o **Argo CD**, não `kubectl`
+à mão — ver [argocd/README.md](argocd/README.md). Os comandos acima seguem valendo para
+bootstrap e para depurar, mas mudança de versão entra pelo CI
+([.github/workflows/integration.yml](../.github/workflows/integration.yml)), que só
+promove depois do teste de integração passar.
 
 ## O que este deploy deliberadamente não resolve
 
