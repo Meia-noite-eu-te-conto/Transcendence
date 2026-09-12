@@ -22,12 +22,17 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffering: "off"
 spec:
   ingressClassName: nginx
-  # TLS: o jogo usa wss://, então não é opcional. Decisão D7 em aberto — reaproveitar
-  # o secret `certificado-tls` de prod, gerar um autoassinado para este namespace, ou
-  # instalar cert-manager. Descomente quando o secret existir em `pong`.
-  # tls:
-  #   - hosts: [pong.homelab]
-  #     secretName: certificado-tls
+  # TLS não é opcional aqui: o front-end abre o WebSocket com wss://. E há uma
+  # assimetria que engana — numa página HTTPS o navegador oferece "prosseguir mesmo
+  # assim", mas um WebSocket com certificado recusado falha SEM nenhuma tela. Só
+  # funciona depois que a exceção já foi aceita visitando https://pong.homelab.
+  #
+  # O secret é `pong-tls`, criado à mão (ver manifests/README.md). NÃO reaproveitamos
+  # o `certificado-tls` de prod: ele é CN=homelab e não tem subjectAltName nenhum, e
+  # navegador sem SAN rejeita desde 2017 — não validaria para pong.homelab.
+  tls:
+    - hosts: [pong.homelab]
+      secretName: pong-tls
   rules:
     - host: pong.homelab
       http:

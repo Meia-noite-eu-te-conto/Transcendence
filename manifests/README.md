@@ -31,7 +31,53 @@ Estes manifests **não funcionam** sem eles. Não é opcional, é bloqueio:
 2. **O secret de pull.** `github-registry` existe só no namespace `prod`; secret é
    namespaced. Copie para `pong` — o comando está em `02-secret.example.yaml`.
 3. **`pong-secrets`.** Criado à mão a partir do `.env.local`, com senhas e `SECRET_KEY`
-   **novas**. Ver `02-secret.example.yaml`.
+   **novas**. Ver `02-secret.example.yaml`. Atenção ao `JWT_SIGNING_KEY`: ele é segredo
+   **compartilhado com quem emite os tokens** (`settings.py` diz "USE A CHAVE EXATA DA
+   API EXTERNA"), então não gere um valor aleatório — use o mesmo que já está em uso.
+
+4. **`pong-tls`.** O front-end abre WebSocket com `wss://`, então TLS não é opcional.
+
+   ```sh
+   cat > /tmp/san.cnf <<'CNF'
+   [req]
+   distinguished_name = dn
+   x509_extensions    = v3
+   prompt             = no
+   [dn]
+   C  = BR
+   ST = MG
+   O  = homelab by davy
+   CN = pong.homelab
+   [v3]
+   basicConstraints = critical, CA:FALSE
+   keyUsage         = critical, digitalSignature, keyEncipherment
+   extendedKeyUsage = serverAuth
+   subjectAltName   = @san
+   [san]
+   DNS.1 = pong.homelab
+   DNS.2 = *.homelab
+   CNF
+
+   openssl req -x509 -newkey rsa:2048 -sha256 -days 397 -nodes \
+     -keyout /tmp/tls.key -out /tmp/tls.crt -config /tmp/san.cnf
+
+   kubectl create secret tls pong-tls -n pong \
+     --cert=/tmp/tls.crt --key=/tmp/tls.key
+
+   shred -u /tmp/tls.key /tmp/san.cnf
+   ```
+
+   **Por que não reaproveitar o `certificado-tls` de `prod`:** ele é `CN=homelab` e
+   **não tem `subjectAltName` nenhum**. Navegador ignora o CN como identidade desde
+   2017, então aquele certificado não valida para host algum — nem para
+   `routine.homelab`. Em página HTTPS dá para clicar em "prosseguir"; num WebSocket
+   **não existe essa tela**, e a conexão falha em silêncio.
+
+   `397` dias é deliberado: acima de 398, Safari e iOS recusam certificado de servidor.
+
+   O certificado é autoassinado, então na primeira visita o navegador avisa. **Abra
+   `https://pong.homelab` e aceite a exceção antes de entrar numa partida** — a exceção
+   vale para o `wss://` da mesma origem. Sem isso o jogo carrega e não conecta.
 
 Além disso, `SECRET_KEY` hoje está fixo no `settings.py` dos dois serviços — precisa
 passar a ser lido do ambiente para o Secret ter efeito.

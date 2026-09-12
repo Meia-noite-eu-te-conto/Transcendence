@@ -38,8 +38,12 @@ k3s v1.36.2, containerd 2.3.2, Debian 13, amd64. `metrics-server` funciona
   Resolução via Pi-hole no próprio cluster.
 
 **Não há cert-manager.** O único Ingress com TLS (`prod/routine-ingress`) usa um secret
-manual chamado `certificado-tls`. Isso é [decisão D7](../migration/06-roadmap.md#decisões-abertas) —
-e importa, porque o jogo usa `wss://`.
+manual chamado `certificado-tls` — que é autoassinado, `CN=homelab` e **sem
+`subjectAltName`**. Navegador ignora o CN como identidade desde 2017, então esse
+certificado não valida para host nenhum; funciona só porque alguém clicou em
+"prosseguir". Este projeto gera o seu próprio, com SAN, no secret `pong-tls`
+([decisão D7](../migration/06-roadmap.md#decisões-resolvidas)) — e isso importa porque
+`wss://` com certificado recusado falha **sem oferecer tela de exceção**.
 
 ## Armazenamento
 
