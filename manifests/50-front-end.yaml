@@ -1,0 +1,72 @@
+# Serve apenas os estáticos. A imagem CARREGA o conteúdo de src/ — em Kubernetes não
+# existe o bind mount /goinfre/front-end-dev que o docker-compose usa.
+# Sem estado, então escala à vontade.
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-end
+  namespace: pong
+  labels:
+    app: front-end
+spec:
+  type: ClusterIP
+  selector:
+    app: front-end
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-end
+  namespace: pong
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: front-end
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels:
+        app: front-end
+    spec:
+      imagePullSecrets:
+        - name: github-registry
+      containers:
+        - name: nginx
+          image: ghcr.io/davypaulino/pong-front-end:v0.1.0
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 100m, memory: 48Mi }
+      volumes:
+        - name: conf
+          configMap:
+            name: front-end-nginx
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: front-end

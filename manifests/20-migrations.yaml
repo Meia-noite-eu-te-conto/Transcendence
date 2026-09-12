@@ -1,0 +1,97 @@
+# Migrations como Job, não como initContainer da API: rodar `migrate` em cada réplica
+# que sobe é desperdício na melhor hipótese e corrida na pior.
+# Reaplicar: apague o Job antes (`kubectl delete job -n pong migrate-user-session`),
+# porque Job é imutável.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-user-session
+  namespace: pong
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: github-registry
+      initContainers:
+        - name: wait-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U usersession; do
+                echo "aguardando postgres..."; sleep 2
+              done
+          envFrom:
+            - configMapRef: { name: pong-config }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 100m, memory: 64Mi }
+      containers:
+        - name: migrate
+          image: ghcr.io/davypaulino/pong-user-session:v0.1.0
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          env:
+            - name: DB_NAME
+              valueFrom: { configMapKeyRef: { name: pong-config, key: USER_SESSION_DB_NAME } }
+            - name: DB_USER
+              valueFrom: { configMapKeyRef: { name: pong-config, key: USER_SESSION_DB_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_DB_PASSWORD } }
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_SECRET_KEY } }
+          envFrom:
+            - configMapRef: { name: pong-config }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 384Mi }
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-game-core
+  namespace: pong
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: github-registry
+      initContainers:
+        - name: wait-postgres
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U gamecore; do
+                echo "aguardando postgres..."; sleep 2
+              done
+          envFrom:
+            - configMapRef: { name: pong-config }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { cpu: 100m, memory: 64Mi }
+      containers:
+        - name: migrate
+          image: ghcr.io/davypaulino/pong-game-core:v0.1.0
+          command: ["python", "manage.py", "migrate", "--noinput"]
+          env:
+            - name: DB_NAME
+              valueFrom: { configMapKeyRef: { name: pong-config, key: GAME_CORE_DB_NAME } }
+            - name: DB_USER
+              valueFrom: { configMapKeyRef: { name: pong-config, key: GAME_CORE_DB_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: GAME_CORE_DB_PASSWORD } }
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: GAME_CORE_SECRET_KEY } }
+          envFrom:
+            - configMapRef: { name: pong-config }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 384Mi }

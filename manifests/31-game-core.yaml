@@ -1,0 +1,84 @@
+# API e WebSocket de partida. Escala horizontalmente: o channel layer do Channels
+# usa Redis, então qualquer pod atende qualquer WebSocket de jogo — o Ingress NÃO
+# precisa de sessão fixa.
+apiVersion: v1
+kind: Service
+metadata:
+  name: game-core
+  namespace: pong
+  labels:
+    app: game-core
+spec:
+  type: ClusterIP
+  selector:
+    app: game-core
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-core
+  namespace: pong
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: game-core
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels:
+        app: game-core
+    spec:
+      imagePullSecrets:
+        - name: github-registry
+      containers:
+        - name: game-core
+          image: ghcr.io/davypaulino/pong-game-core:v0.1.0
+          command:
+            - uvicorn
+            - game_project.asgi:application
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8001"
+          ports:
+            - name: http
+              containerPort: 8001
+          env:
+            - name: DB_NAME
+              valueFrom: { configMapKeyRef: { name: pong-config, key: GAME_CORE_DB_NAME } }
+            - name: DB_USER
+              valueFrom: { configMapKeyRef: { name: pong-config, key: GAME_CORE_DB_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: GAME_CORE_DB_PASSWORD } }
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: GAME_CORE_SECRET_KEY } }
+          envFrom:
+            - configMapRef: { name: pong-config }
+          # Sonda TCP porque o legado NÃO tem endpoint de saúde. Depois da TK.1,
+          # troque pelas versões HTTP abaixo — TCP só prova que a porta abriu, não
+          # que o Django consegue falar com o banco.
+          readinessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 5
+          # readinessProbe:
+          #   httpGet: { path: /readyz, port: http }
+          # livenessProbe:
+          #   httpGet: { path: /healthz, port: http }
+          resources:
+            requests: { cpu: 100m, memory: 192Mi }
+            limits:   { cpu: 500m, memory: 384Mi }
+      terminationGracePeriodSeconds: 30
