@@ -6,7 +6,7 @@
 	url = git@github.com:Meia-noite-eu-te-conto/Game-Core.git
 [submodule "User-Session"]
 	path = User-Session
-	url = git@github.com:Meia-noite-eu-te-conto/User-Serssion.git
+	url = git@github.com:Meia-noite-eu-te-conto/User-Session.git
 [submodule "Game-BFF"]
 	path = Game-BFF
 	url = git@github.com:Meia-noite-eu-te-conto/Game-BFF.git
