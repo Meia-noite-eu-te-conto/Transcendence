@@ -17,6 +17,22 @@ Reiniciar containers
 make att
 ```
 
+## Documentação
+
+| Onde | O quê |
+| --- | --- |
+| [CONTEXT.md](CONTEXT.md) | orientação de 5 minutos sobre o repositório (e um por projeto) |
+| [AGENTS.md](AGENTS.md) | regras de engenharia: invariantes, layout, convenções Go e Angular |
+| [CLAUDE.md](CLAUDE.md) | guia para o Claude Code (skills, subagentes, armadilhas) |
+| [docs/migration/](docs/migration/) | análise do estado atual, arquitetura alvo, contratos e ondas |
+| [docs/adr/](docs/adr/) | decisões de arquitetura e o motivo de cada uma |
+| [docs/0-context/](docs/0-context/), [docs/1-container/](docs/1-container/) | C4 original — descreve a intenção, não o sistema atual |
+
+> **Este projeto está em migração:** Django → Go e JS puro → Angular, por strangler fig.
+> Antes de escrever código, leia [docs/migration/README.md](docs/migration/README.md)
+> para saber qual é a onda atual, e [docs/migration/06-roadmap.md](docs/migration/06-roadmap.md)
+> para a próxima tarefa. Nenhuma feature nova no legado.
+
 ## Objetivo
 
 - [Sessões Escolhidas do Projeto](https://tcdmodules.vercel.app/v14.1?state=34341063)
