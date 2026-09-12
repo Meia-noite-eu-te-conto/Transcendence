@@ -143,3 +143,14 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+    # depends_on OBRIGATÓRIO aqui, não conveniência: o nginx resolve o
+    # hostname do `proxy_pass` na CARGA da config, não na primeira
+    # requisição. Sem os upstreams no DNS, ele morre no boot com
+    # `[emerg] host not found in upstream "user-session"` — verificado.
+    # No cluster isso não acontece porque o proxy é do Ingress, não deste
+    # nginx; é uma diferença real entre o compose e o k8s.
+    depends_on:
+      user-session:
+        condition: service_healthy
+      game-core:
+        condition: service_healthy
