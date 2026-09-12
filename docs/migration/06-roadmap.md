@@ -52,7 +52,7 @@ Nenhuma linha de domínio portada. Objetivo: tornar possível portar com seguran
 
 | ID | Tarefa | Tam | Depende | Pronto quando |
 | --- | --- | --- | --- | --- |
-| **T0.0** | 🚦 Realinhar os submodules com `origin/main` e refazer a análise | M | — | o raiz fixa Game-Core, User-Session e Game-Front-End **atrás** do `main` (6, 6 e 3 commits). À frente há `auth_check.py`, o app `roomsv2/`, campo `userid` em `Player` e mudanças na física. **Bloqueia T0.6, T0.9, T2.x e T3.x**, que foram planejados sobre código defasado. Ver a ressalva em [01-analise-atual.md](01-analise-atual.md) |
+| **T0.0** | ✅ Realinhar os submodules com `origin/main` e refazer a análise | M | — | o raiz fixa Game-Core, User-Session e Game-Front-End **atrás** do `main` (6, 6 e 3 commits). À frente há `auth_check.py`, o app `roomsv2/`, campo `userid` em `Player` e mudanças na física. **Bloqueia T0.6, T0.9, T2.x e T3.x**, que foram planejados sobre código defasado. Ver a ressalva em [01-analise-atual.md](01-analise-atual.md) |
 | **T0.1** | Rotacionar segredos; `.env` fora do versionamento | P | — | `git ls-files .env` vazio; `.env.local` no `.gitignore`; senhas e `SECRET_KEY` antigas não funcionam; `SECRET_KEY` lido do ambiente nos dois `settings.py` |
 | **T0.2** | Dockerfile multi-stage para os dois serviços Python | M | T0.3 | `docker compose build` reproduzível; dependências travadas (pip-tools ou uv); sem `pip install` no `command`; sem bind em `/goinfre`; boot < 10 s |
 | **T0.3** | Monorepo: `git subtree add` dos 4 submodules para `legacy/` | M | T0.1 | 4 projetos em `legacy/` com histórico preservado; `.gitmodules` removido; compose e Makefile apontando para os novos caminhos; repositórios originais arquivados em leitura |
@@ -61,7 +61,7 @@ Nenhuma linha de domínio portada. Objetivo: tornar possível portar com seguran
 | **T0.6** | `contracts/openapi/`: levantar os ~20 endpoints existentes **a partir do código** | G | T0.3 | todo endpoint de `legacy/*/views.py` documentado com parâmetro, schema e **cada** código de status que o código produz; `make gen` gera tipos Go e TS |
 | **T0.7** | `contracts/asyncapi/` + `contracts/enums.yaml` | M | T0.6 | os 4 eventos atuais documentados; envelope definido; mapa canônico de slot→cor substituindo os três divergentes |
 | **T0.8** | `services/gateway` (skill `go-service`) como proxy puro | M | T0.6 | todo o tráfego passa pelo gateway; comportamento idêntico ao nginx; `/healthz` e `/readyz`; rollback = apontar o edge de volta |
-| **T0.9** | Gateway emite e valida JWT de convidado; Django aceita `Authorization` **e** `X-User-Id` | M | T0.8 | `POST /api/v1/auth/guest` devolve token; refresh em cookie `HttpOnly`; rate limit por jogador e IP |
+| **T0.9** | ⚠️ **Revisar antes de executar.** Gateway emite e valida JWT; Django aceita `Authorization` **e** `X-User-Id` | M | T0.8 | O `User-Session` já tem SimpleJWT com HS256 e `auth_check.py` no `main`. Leia o que existe antes de escrever: a tarefa é integrar e mover para o gateway, não construir. Corrigir também o `print()` em `settings.py:64`, que escreve `JWT_SIGNING_KEY` no stdout |
 | **T0.10** | SPA legada passa a mandar `Authorization` | P | T0.9 | nenhuma chamada da SPA usa `X-User-Id`; WS com token no subprotocolo |
 | **T0.11** | NATS e OTel no compose, sem uso | P | T0.4 | NATS responde; collector recebe trace do gateway |
 
@@ -161,7 +161,7 @@ laterais. **T3.6 e T3.8 são portões técnicos**: sem eles, não se corta nada.
 
 | ID | Tarefa | Tam | Depende | Pronto quando |
 | --- | --- | --- | --- | --- |
-| **T3.1** | Capturar golden files dos 6 cenários (skill `port-game-loop` §3) | M | — *(pode começar na Onda 1)* | `services/game/testdata/golden/*.jsonl` com RNG semeado; os 6 cenários da skill, incluindo canto, gol sem toque e bot |
+| **T3.1** | Capturar golden files dos 6 cenários (skill `port-game-loop` §3) | M | **D9** | `services/game/testdata/golden/*.jsonl` com RNG semeado; os 6 cenários da skill, incluindo canto, gol sem toque e bot |
 | **T3.2** | `internal/domain/pong`: bola, paddle, colisão 2 jogadores | G | T3.1 | `Step` puro, determinístico, sem I/O; golden de `2p-*` passando com tolerância `1e-6` |
 | **T3.4** | Domínio: gol, placar, reset, fim de jogo | M | T3.2 | inclui o ramo que pontua **todos os outros** quando não houve último toque |
 | **T3.5** | Domínio: bot | M | T3.2 | função pura, não goroutine com `sleep`; golden de `1p-bot` passando |
@@ -216,6 +216,7 @@ fechar e rode ao lado das ondas 1–3.
 | # | Decisão | Resultado | Consequência |
 | --- | --- | --- | --- |
 | **D3** | Manter o modo de 4 jogadores? | **Cortado do produto** (2026-09-12) | `MATCH` aceita apenas 2 jogadores. Slot vira 0 ou 1; os valores 2 e 3 ficam reservados. A física do Go cobre só paddles laterais — T3.3 (paddles em dois eixos) sai do roadmap, e os golden files caem de 8 para 6 cenários. O código de 4 jogadores no legado **não é removido**: morre junto com o `Game-Core`. Mas `get_room_type_range` em `legacy/User-Session/src/rooms/utils.py` passa a devolver `[2]` para `MATCH`, e a opção sai do formulário de criar sala — senão o deploy no cluster entrega um modo que decidimos não suportar. |
+| **D10** | Versão das imagens | **`v2.0.0` nos três serviços** (2026-09-12) | Versão única para os três, acima de todo tag existente (o máximo era `v1.1.0`) e do `v1.3.0` do produto. Marca a virada de plataforma e o início da migração, e passa a tratar os três como um deployável só — que é o que são no cluster. Tags anotadas, ao contrário das antigas. |
 | **D8** | Namespace das imagens e forma de publicar | **`ghcr.io/davypaulino/*` via GitHub Actions** (2026-09-12) | Namespace pessoal porque é o que o cluster já usa (`routine-api`) e o pull secret `github-registry` já funciona para ele. Publicação por workflow em cada repositório, com smoke test antes do push. Exige o secret de organização `GHCR_TOKEN` (PAT clássico, `write:packages`): o `GITHUB_TOKEN` automático só publica pacotes do dono do repositório, que é a org. |
 | **D5** | Alvo de deploy: compose ou Kubernetes | **Kubernetes** (2026-09-12) | Cluster k3s do homelab, 2 nós. Manifests em YAML puro aplicados com `kubectl`, sem Helm nem Kustomize, seguindo o padrão dos apps que já rodam lá. Nasce a **Onda 0-K**, que vem antes das ondas de migração: o legado sobe no cluster primeiro, e depois cada serviço Go substitui um Deployment. `manifests/` deixa de ser pasta vazia. Detalhe em [docs/deploy/](../deploy/). |
 
@@ -226,6 +227,7 @@ fechar e rode ao lado das ondas 1–3.
 | **D1** | Traefik ou manter ingress-nginx no edge | T0.4 | A [arquitetura alvo](02-arquitetura-alvo.md) sugeria Traefik, mas o cluster **já tem ingress-nginx** com MetalLB e cinco Ingress em uso. Trocar o controller por causa de um projeto não se paga. Recomendação: manter ingress-nginx e atualizar o ADR. |
 | **D2** | Tamanho do time e dono de cada track | calendário inteiro | Os tamanhos assumem uma pessoa por tarefa. O track Angular e o track Go rodam em paralelo **se** houver duas frentes; com uma só pessoa, o Angular vai para o fim e o roadmap fica sequencial. |
 | **D4** | Predição local do próprio paddle | depois de T4.9 | Etapa opcional do modelo de rede ([ADR-0004](../adr/0004-simulacao-autoritativa.md)). Melhora a resposta percebida; adiciona reconciliação. Decidir só depois de medir a latência real com interpolação. |
+| **D9** | Reaplicar ou abandonar os 6 commits de física do Game-Core | T3.1 | Ao publicar o `main`, os commits `feat: alter ball direction`, `feat: adjust game config and paddle positions` e outros 4 foram sobrescritos. Estão preservados em `resgate/main-antes-do-overwrite`. **A física de referência do golden file depende dessa escolha** — decidir antes de T3.1. |
 | **D6** | Reaproveitar o Postgres existente ou subir um próprio | TK.5 | O cluster já tem `storage/homelab-database-set`. Reaproveitar economiza ~256 MiB de request e um PVC, mas acopla o projeto a um banco compartilhado com outras coisas do homelab. Os manifests atuais sobem um Postgres próprio no namespace `pong`, com dois bancos — ver [docs/deploy/02-recursos.md](../deploy/02-recursos.md). |
 | **D7** | TLS em `pong.homelab` | TK.10 | Não há cert-manager no cluster; `prod` usa um secret manual `certificado-tls`. Opções: reaproveitar esse secret, gerar um autoassinado para o namespace, ou instalar cert-manager. O jogo usa `wss://`, então TLS não é opcional para o WebSocket. |
 

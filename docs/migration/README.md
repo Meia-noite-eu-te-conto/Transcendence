@@ -125,7 +125,7 @@ uma estão em [06-roadmap.md](06-roadmap.md).
 
 | Onda | Item | Estado |
 | --- | --- | --- |
-| 0 | **T0.0** realinhar submodules com `main` + refazer análise | ⚠️ bloqueia T0.6, T0.9, ondas 2 e 3 |
+| 0 | **T0.0** realinhar submodules com `main` + refazer análise | ✅ 2026-09-12 — revelou auth já existente e `roomsv2/`; ver D9 |
 | 0 | Monorepo (submodules importados) | — |
 | 0 | Dockerfile dos serviços Python | ✅ 2026-09-12 (build verificado) |
 | 0 | `contracts/` (OpenAPI + AsyncAPI + proto) | — |
@@ -134,8 +134,8 @@ uma estão em [06-roadmap.md](06-roadmap.md).
 | 0 | NATS + OTel no compose | — |
 | 0-K | `/healthz` e `/readyz` no Django | — |
 | 0-K | imagem do front com estáticos embutidos | ✅ 2026-09-12 (build + serve verificados) |
-| 0-K | workflow de build/push nos 3 repos | ✅ 2026-09-12 (YAML validado) |
-| 0-K | imagens publicadas no ghcr.io | ⏳ falta o secret `GHCR_TOKEN` na org e um tag `v0.1.0` |
+| 0-K | workflow de build/push nos 3 repos | ✅ 2026-09-12 (3 runs com sucesso) |
+| 0-K | imagens publicadas no ghcr.io | ✅ 2026-09-12 — `v2.0.0` nos três, via push de tag (privadas) |
 | 0-K | namespace, ConfigMap, Secret | — |
 | 0-K | Postgres StatefulSet + PVC | — |
 | 0-K | Redis com PVC | — |

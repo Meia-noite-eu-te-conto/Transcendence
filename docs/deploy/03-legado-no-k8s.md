@@ -85,21 +85,28 @@ organização**, para os três repositórios compartilharem um só.
 > secret `github-registry` já funciona. O token fica só no GitHub — não passa por
 > arquivo, por linha de comando nem por conversa.
 
-Para publicar `v0.1.0`, em cada repositório:
+Publicado em 2026-09-12 como **`v2.0.0`** nos três repositórios — a versão que marca a
+virada de plataforma (imagem versionada em registry, deploy em Kubernetes) e o ponto de
+partida da migração para Go.
+
+Para a próxima versão, em cada repositório:
 
 ```sh
-git tag v0.1.0 && git push origin v0.1.0
+git tag -a v2.1.0 -m "..." && git push origin v2.1.0
 ```
+
+Tag anotada, não leve: carrega autor, data e mensagem. As tags antigas dos repos
+(`v1.0.0`, `v1.1.0`) são leves, de antes desta convenção.
 
 ### Build local, para depurar
 
 ```sh
-podman build -t ghcr.io/davypaulino/pong-user-session:v0.1.0 ./User-Session
-podman build -t ghcr.io/davypaulino/pong-game-core:v0.1.0    ./Game-Core
-podman build -t ghcr.io/davypaulino/pong-front-end:v0.1.0    ./Game-Front-End
+podman build -t pong-user-session:dev ./User-Session
+podman build -t pong-game-core:dev    ./Game-Core
+podman build -t pong-front-end:dev    ./Game-Front-End
 
-podman run --rm ghcr.io/davypaulino/pong-game-core:v0.1.0 python manage.py check
-podman run --rm ghcr.io/davypaulino/pong-user-session:v0.1.0 id   # precisa ser uid 10001
+podman run --rm pong-game-core:dev python manage.py check
+podman run --rm pong-user-session:dev id   # precisa ser uid 10001
 ```
 
 `manage.py check` passa sem banco e pega erro de configuração do Django.

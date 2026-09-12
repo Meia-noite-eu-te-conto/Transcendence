@@ -4,34 +4,34 @@ Levantamento feito sobre o código que o repositório raiz **fixa** nos submodul
 `9252e6b`: Game-Core `b72d7ac`, User-Session `35d5602`, Game-Front-End `c3cfb97`.
 ~3.300 linhas de Python (fora migrations) e ~3.900 de JS/HTML.
 
-> ## ⚠️ Esta análise está defasada em relação ao `main` dos submodules
+> ## ⚠️ Revisada após o realinhamento com o `main` (2026-09-12)
 >
-> O repositório raiz aponta para commits **atrás** de `origin/main`: Game-Core 6
-> commits, User-Session 6, Game-Front-End 3. O que existe no `main` e **não** foi
-> analisado:
+> Esta análise foi escrita sobre commits que o raiz fixava, atrás do `main`. Os
+> submodules foram realinhados e o que estava à frente foi verificado. Duas conclusões
+> mudaram:
 >
-> | Submodule | Mudanças à frente |
-> | --- | --- |
-> | `User-Session` | `session/auth_check.py`, `session/exception_handler.py`, app `roomsv2/` novo (serializers, paginação, views), campo `userid` em `Player` (migrations 0009 e 0010), `rooms/views.py` reescrito em boa parte, `requirements.txt` alterado |
-> | `Game-Core` | `games_worker/game_core/game_session.py`, `games_worker/utils/game_config.py`, `games_app/consumers/GameSessionConsumer.py`, `games_app/repositories/game_repository.py` |
-> | `Game-Front-End` | `nginx/default.conf` (+60 linhas), `index.html`, `EventHandlers.js`, `game.html` |
+> **§4.6 está parcialmente errada.** O User-Session **já tem autenticação** no `main`:
+> `djangorestframework_simplejwt` com HS256, `SIMPLE_JWT` configurado em `settings.py`,
+> `session/auth_check.py` e `session/exception_handler.py`. Existe também um app
+> `roomsv2/` com serializers, paginação e views — que cobre parte do que a Onda 2
+> pretendia construir. **T0.9 e a Onda 2 precisam de revisão: é integração, não
+> construção.** Ver a atualização no [ADR-0007](../adr/0007-jwt-no-gateway.md).
 >
-> **Consequências diretas, a revalidar antes de agir:**
+> **A física mudou, e essa mudança foi descartada.** Os 6 commits do Game-Core que
+> estavam à frente (`feat: alter ball direction`, `feat: adjust game config and paddle
+> positions`, entre outros) foram sobrescritos ao publicar o `main`. Eles estão
+> preservados na branch `resgate/main-antes-do-overwrite` do Game-Core e precisam de
+> decisão: reaplicar ou abandonar. **Não capture golden file (T3.1) antes de resolver
+> isso** — a física de referência depende dessa escolha.
 >
-> 1. **§4.6 (nenhuma autenticação) provavelmente não vale mais.** Existe
->    `auth_check.py` no `main`. Antes de executar T0.9, leia o que já foi feito —
->    pode ser integração, não construção.
-> 2. **A física mudou.** As constantes da §6 e o plano de golden file da skill
->    `port-game-loop` saíram do commit antigo. Recapture a partir do `main`.
-> 3. **`roomsv2/` pode já ser parte do que a Onda 2 pretendia fazer.** Compare antes
->    de portar; talvez o contrato alvo deva partir dele.
-> 4. **`requirements.txt` mudou**, então o build das imagens foi verificado contra
->    dependências antigas.
+> O que continua válido: tudo sobre filas Redis, estado em memória do worker, tick que
+> desliza, banco no loop de simulação, mapas de cor divergentes, build não reproduzível
+> e ausência de teste.
 >
-> Primeiro passo para resolver: `git submodule update --remote` e refazer esta
-> análise sobre o `main`. Registrado como tarefa **T0.0** no
-> [roadmap](06-roadmap.md).
-
+> **Dois segredos novos a rotacionar**, achados na revisão: `User-Session/src/.env`
+> commitado com `JWT_SIGNING_KEY`, e um `print()` no nível de módulo em `settings.py:64`
+> que **escreve a chave de assinatura JWT no stdout** — em Kubernetes isso vai direto
+> para `kubectl logs`.
 
 ## 1. Topologia real
 

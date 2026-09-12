@@ -1,6 +1,15 @@
 # ADR-0007 — Identidade por JWT emitido no gateway
 
-**Estado:** Aceito · **Data:** 2026-09-12
+**Estado:** Aceito, **contexto revisado** · **Data:** 2026-09-12
+
+> **Atualização (2026-09-12), após realinhar os submodules com o `main`:** o contexto
+> abaixo foi escrito sobre código defasado. O `User-Session` **já tem** autenticação no
+> `main` — `djangorestframework_simplejwt`, HS256, `SIMPLE_JWT` em `settings.py`,
+> `session/auth_check.py` e `session/exception_handler.py`. A decisão de concentrar a
+> emissão no gateway continua válida como alvo, mas a tarefa muda de natureza: é
+> **integrar e mover** o que existe, não construir do zero. Duas coisas a considerar na
+> revisão de T0.9: a chave já é lida de `JWT_SIGNING_KEY` (bom), e o `settings.py`
+> imprime essa chave no stdout na importação (a corrigir antes de qualquer deploy).
 
 ## Contexto
 Hoje não há autenticação nenhuma. A identidade é um UUID guardado em `localStorage` e
