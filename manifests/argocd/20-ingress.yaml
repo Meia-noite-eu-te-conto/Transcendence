@@ -1,0 +1,36 @@
+# UI em argocd.homelab, pelo ingress-nginx — mesma convenção dos outros apps
+# do cluster (grafana.homelab, pihole.homelab, pong.homelab), em vez de gastar
+# um IP do pool do MetalLB.
+#
+# backend-protocol HTTP porque o argocd-server roda com server.insecure
+# (ver 10-cmd-params.yaml). Sem essa annotation o ingress-nginx tentaria HTTPS
+# contra um backend que fala HTTP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-server
+  namespace: argocd
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    # O argocd CLI usa gRPC sobre HTTP/2; sem timeout folgado, operação longa
+    # (sync grande, log streaming) cai no meio.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "1800"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "1800"
+spec:
+  ingressClassName: nginx
+  # Mesmo certificado autoassinado do pong (SAN cobre *.homelab), reaproveitado
+  # aqui. Gerar por namespace: ver manifests/README.md.
+  tls:
+    - hosts: [argocd.homelab]
+      secretName: argocd-tls
+  rules:
+    - host: argocd.homelab
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80

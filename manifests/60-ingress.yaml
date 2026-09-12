@@ -1,0 +1,57 @@
+# Roteamento por caminho, direto para cada Service. O nginx do pod de front-end
+# serve só estáticos — o proxy das APIs, que no docker-compose era feito pelo
+# default.conf, passa a ser declarado aqui.
+#
+# NÃO use `rewrite-target: /` (como faz prod/routine-ingress): o Django espera o
+# caminho completo (`/api/v1/user-session/rooms/`). Reescrever para `/` devolve 404
+# em tudo.
+#
+# WebSocket: o ingress-nginx faz o upgrade sozinho ao ver o header, então não há
+# annotation de upgrade. Mas o timeout padrão de 60 s DERRUBA conexão ociosa — daí
+# os proxy-*-timeout abaixo. E não é preciso sessão fixa: o channel layer do
+# Channels usa Redis, então qualquer pod atende qualquer conexão.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pong
+  namespace: pong
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  # TLS não é opcional aqui: o front-end abre o WebSocket com wss://. E há uma
+  # assimetria que engana — numa página HTTPS o navegador oferece "prosseguir mesmo
+  # assim", mas um WebSocket com certificado recusado falha SEM nenhuma tela. Só
+  # funciona depois que a exceção já foi aceita visitando https://pong.homelab.
+  #
+  # O secret é `pong-tls`, criado à mão (ver manifests/README.md). NÃO reaproveitamos
+  # o `certificado-tls` de prod: ele é CN=homelab e não tem subjectAltName nenhum, e
+  # navegador sem SAN rejeita desde 2017 — não validaria para pong.homelab.
+  tls:
+    - hosts: [pong.homelab]
+      secretName: pong-tls
+  rules:
+    - host: pong.homelab
+      http:
+        paths:
+          - path: /api/v1/user-session
+            pathType: Prefix
+            backend:
+              service:
+                name: user-session
+                port: { number: 8002 }
+          - path: /api/v1/game-core
+            pathType: Prefix
+            backend:
+              service:
+                name: game-core
+                port: { number: 8001 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: front-end
+                port: { number: 80 }

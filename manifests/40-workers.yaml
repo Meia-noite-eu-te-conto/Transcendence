@@ -1,0 +1,115 @@
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │ RESTRIÇÃO DURA: os dois workers rodam com replicas: 1 e strategy: Recreate.  │
+# │                                                                              │
+# │ Não é preferência, é consequência do código:                                 │
+# │  · `game-worker` guarda as partidas em andamento num dict em memória do      │
+# │    processo (GameMakerListener.game_sessions) e consome `create-game-queue`   │
+# │    com LPOP. Duas réplicas consomem a MESMA fila e simulam jogos diferentes,  │
+# │    sem saber uma da outra. Nenhuma atende o WebSocket dos jogadores da        │
+# │    partida da outra.                                                         │
+# │  · `session-worker` tem o mesmo padrão na `game-sync-session-queue`. Duas     │
+# │    réplicas avançariam o chaveamento do torneio duas vezes — e os eventos     │
+# │    não têm eventId para deduplicar.                                          │
+# │                                                                              │
+# │ RollingUpdate sobe o pod novo antes de derrubar o velho: os dois coexistem    │
+# │ por alguns segundos em TODO deploy. Recreate derruba primeiro. O custo é uma  │
+# │ janela de indisponibilidade por atualização — é o preço correto aqui.         │
+# │                                                                              │
+# │ Reiniciar o game-worker MATA as partidas em andamento. Não é bug do deploy;   │
+# │ é o estado em memória. Kubernetes não resolve isso — resolve o lease de       │
+# │ partida do game-engine em Go, na Onda 3 (ADR-0004).                          │
+# └──────────────────────────────────────────────────────────────────────────────┘
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-worker
+  namespace: pong
+  annotations:
+    transcendence.io/scaling: "singleton: estado em memória + LPOP em fila compartilhada"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: game-worker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: game-worker
+    spec:
+      imagePullSecrets:
+        - name: github-registry
+      containers:
+        - name: game-worker
+          image: ghcr.io/davypaulino/pong-game-core:v2.0.0
+          command: ["python", "manage.py", "session_worker"]
+          env:
+            - name: DB_NAME
+              valueFrom: { configMapKeyRef: { name: pong-config, key: GAME_CORE_DB_NAME } }
+            - name: DB_USER
+              valueFrom: { configMapKeyRef: { name: pong-config, key: GAME_CORE_DB_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: GAME_CORE_DB_PASSWORD } }
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: GAME_CORE_SECRET_KEY } }
+          envFrom:
+            - configMapRef: { name: pong-config }
+          # Sem porta HTTP, logo sem probe HTTP. Uma sonda exec aqui mediria o
+          # processo, não a simulação — e um worker "vivo" com o loop travado é
+          # justamente o modo de falha que importa. Observabilidade real vem da
+          # profundidade das filas Redis (TK.13), não de probe.
+          resources:
+            # CPU limit alto DE PROPÓSITO. O loop roda a 50 Hz com matemática de
+            # colisão por tick; estourar o limite causa throttle de CFS, que não
+            # degrada suavemente — piora exatamente o defeito que o legado já tem
+            # (o tick desliza, porque o sleep vem depois do trabalho).
+            # Se ele consumir mais que isso, o problema é o código, não o limite.
+            requests: { cpu: 250m, memory: 192Mi }
+            limits:   { cpu: "1500m", memory: 384Mi }
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: session-worker
+  namespace: pong
+  annotations:
+    transcendence.io/scaling: "singleton: LPOP em fila compartilhada, eventos sem idempotência"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: session-worker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: session-worker
+    spec:
+      imagePullSecrets:
+        - name: github-registry
+      containers:
+        - name: session-worker
+          image: ghcr.io/davypaulino/pong-user-session:v2.0.0
+          command: ["python", "manage.py", "game_integration"]
+          env:
+            - name: DB_NAME
+              valueFrom: { configMapKeyRef: { name: pong-config, key: USER_SESSION_DB_NAME } }
+            - name: DB_USER
+              valueFrom: { configMapKeyRef: { name: pong-config, key: USER_SESSION_DB_USER } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_DB_PASSWORD } }
+            - name: SECRET_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: USER_SESSION_SECRET_KEY } }
+            - name: JWT_SIGNING_KEY
+              valueFrom: { secretKeyRef: { name: pong-secrets, key: JWT_SIGNING_KEY } }
+          envFrom:
+            - configMapRef: { name: pong-config }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits:   { cpu: 300m, memory: 256Mi }
+      terminationGracePeriodSeconds: 30

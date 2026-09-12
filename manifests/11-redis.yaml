@@ -1,0 +1,80 @@
+# Redis com PVC, NÃO emptyDir.
+# Aqui vivem três coisas: o channel layer do Django Channels (efêmero, ok perder),
+# as filas `create-game-queue` e `game-sync-session-queue` (NÃO ok perder), e o
+# buffer de input por jogador (efêmero).
+# Com emptyDir, todo restart do pod perde as partidas em criação e os resultados
+# não consumidos. appendonly reduz a janela — não é durabilidade de verdade.
+# A correção real é o NATS JetStream na Onda 2 (ADR-0002).
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: pong
+  labels:
+    app: redis
+spec:
+  clusterIP: None
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: pong
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args:
+            - "--appendonly"
+            - "yes"
+            - "--appendfsync"
+            - "everysec"
+            - "--maxmemory"
+            - "96mb"
+            - "--maxmemory-policy"
+            - "noeviction"   # NUNCA allkeys-lru: evict aqui apaga fila de partida
+          ports:
+            - name: redis
+              containerPort: 6379
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 5
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 1Gi

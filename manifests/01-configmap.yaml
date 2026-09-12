@@ -1,0 +1,54 @@
+# Configuração não sensível, compartilhada pelos serviços Django.
+# Senhas e SECRET_KEY ficam no Secret (ver 02-secret.example.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pong-config
+  namespace: pong
+data:
+  DB_HOST: "postgres.pong.svc.cluster.local"
+  DB_PORT: "5432"
+  REDIS_HOST: "redis.pong.svc.cluster.local"
+  REDIS_PORT: "6379"
+  USER_SESSION_DB_NAME: "usersession"
+  USER_SESSION_DB_USER: "usersession"
+  GAME_CORE_DB_NAME: "gamecore"
+  GAME_CORE_DB_USER: "gamecore"
+  DJANGO_LOG_LEVEL: "INFO"
+---
+# nginx do front-end: serve apenas os estáticos.
+# O proxy das APIs é feito pelo Ingress, não aqui — um salto menos e roteamento
+# declarado num só lugar. O default.conf do repositório legado (que faz proxy e
+# termina TLS no pod) não é usado no cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: front-end-nginx
+  namespace: pong
+data:
+  default.conf: |
+    server {
+        listen 80;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location = /healthz {
+            access_log off;
+            return 200 "ok\n";
+            add_header Content-Type text/plain;
+        }
+
+        # =404, NÃO fallback para /index.html. O roteador da SPA legada nunca muda
+        # a URL (dá pushState com window.location.href) e busca os parciais por
+        # caminho real — /home.html, /game.html. Fallback aqui só mascararia asset
+        # ausente: um .js faltando voltaria 200 com HTML dentro, e o erro apareceria
+        # como falha de parse de JavaScript em vez de 404.
+        # A SPA Angular da Onda 4 usa rota real e VAI precisar do fallback.
+        location / {
+            try_files $uri $uri/ =404;
+            autoindex off;
+            expires 10m;
+        }
+    }

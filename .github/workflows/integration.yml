@@ -1,0 +1,193 @@
+name: integration
+
+# Porta de entrada para o cluster: sobe o stack completo a partir das imagens
+# JÁ PUBLICADAS, exercita o fluxo atravessando os três serviços com k6, e só
+# então promove — escrevendo as tags nos manifests, que é o que o Argo CD
+# observa para sincronizar no k8s.
+#
+#   submodule publica tag  →  imagem no ghcr.io
+#   pin do submodule sobe aqui (PR → main)  →  ESTE workflow
+#   k6 de integração passa  →  commit nos manifests/
+#   Argo CD vê manifests/ mudar  →  sync no cluster
+#
+# A tag da imagem é DERIVADA do pin do submodule, não configurada à parte:
+# o pin é a única fonte da verdade. Foi exatamente a divergência entre pin
+# (v2.0.0) e manifest (v2.0.4) que motivou este workflow existir.
+#
+# Requer o secret GHCR_TOKEN (secret da organização) para puxar as imagens
+# privadas do ghcr.io.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    # Evita laço: a promoção escreve em manifests/, e não deve se
+    # retriggerar.
+    paths-ignore:
+      - "manifests/**"
+      - "docs/**"
+      - "*.md"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth: 0 e as tags dos submodules são necessários para resolver
+      # pin → tag. Sem histórico completo, `git tag --points-at` não acha nada.
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: busca as tags dos submodules
+        run: git submodule foreach 'git fetch --tags origin || true'
+
+      # Resolve, para cada submodule, qual tag corresponde ao commit fixado.
+      # Se o pin não estiver numa tag, falha: promover algo sem versão
+      # nomeada é exatamente o que causa a divergência que este workflow
+      # existe para impedir.
+      - id: versions
+        name: resolve as versoes a partir dos pins
+        run: |
+          set -euo pipefail
+          resolve() {
+            local dir="$1" out="$2"
+            local pin tag
+            pin=$(git -C "$dir" rev-parse HEAD)
+            tag=$(git -C "$dir" tag --points-at "$pin" --sort=-v:refname \
+                  | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
+            if [ -z "$tag" ]; then
+              echo "::error::$dir está fixado em ${pin:0:7}, que não tem tag vX.Y.Z."
+              echo "::error::Promova a partir de um commit com tag — o pin é a fonte da versão."
+              exit 1
+            fi
+            echo "  $dir -> $tag (${pin:0:7})"
+            echo "$out=$tag" >> "$GITHUB_OUTPUT"
+            # Também no GITHUB_ENV: o `docker compose` reinterpola o arquivo em
+            # TODA invocação, então os passos de logs e down precisam das
+            # variáveis tanto quanto o de subir. Sem isso, uma falha real fica
+            # mascarada por "required variable ... is missing a value".
+            echo "$(echo "$out" | tr 'a-z' 'A-Z')=$tag" >> "$GITHUB_ENV"
+          }
+          resolve User-Session   user_session_tag
+          resolve Game-Core      game_core_tag
+          resolve Game-Front-End front_end_tag
+
+      - name: login no ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: davypaulino
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      # Sem `--wait`: ele falha sem dizer QUAL serviço quebrou, o que custou
+      # várias iterações de depuração às cegas. A espera explícita abaixo
+      # imprime o estado de cada serviço a cada tentativa, então uma falha
+      # futura se autodiagnostica no próprio log.
+      - name: sobe o stack completo com as imagens publicadas
+        run: |
+          set -euo pipefail
+          C="docker compose -f deploy/compose/docker-compose.integration.yml"
+
+          $C up -d
+
+          echo "=== estado inicial ==="
+          $C ps -a --format '{{.Service}}\t{{.State}}\t{{.Status}}'
+
+          # Migrations primeiro: são one-shot e precisam terminar com 0 antes
+          # de qualquer coisa depender delas.
+          for m in user-session-migrate game-core-migrate; do
+            for i in $(seq 1 60); do
+              state=$($C ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | awk -v s="$m" '$1==s {print $2" "$3}')
+              case "$state" in
+                "exited 0") echo "  $m: OK"; break ;;
+                "exited "*) echo "::error::$m falhou: $state"; $C logs "$m" | tail -40; exit 1 ;;
+              esac
+              [ "$i" = "60" ] && { echo "::error::$m não terminou em 60s"; $C logs "$m" | tail -40; exit 1; }
+              sleep 1
+            done
+          done
+
+          # Serviços de longa duração: espera healthy (ou running, para os que
+          # não têm healthcheck).
+          need="postgres redis user-session game-core game-worker session-worker front-end"
+          for i in $(seq 1 120); do
+            pending=""
+            for svc in $need; do
+              line=$($C ps -a --format '{{.Service}} {{.State}} {{.Health}}' | awk -v s="$svc" '$1==s {print $2" "$3}')
+              case "$line" in
+                "running healthy"|"running ") ;;          # ok
+                "exited"*|"dead"*)
+                  echo "::error::$svc morreu: $line"
+                  $C logs "$svc" | tail -40
+                  exit 1 ;;
+                *) pending="$pending $svc" ;;
+              esac
+            done
+            [ -z "$pending" ] && { echo "=== todos prontos em ${i}s ==="; break; }
+            if [ "$i" = "120" ]; then
+              echo "::error::não ficaram prontos em 120s:$pending"
+              $C ps -a
+              for svc in $pending; do echo "--- logs de $svc ---"; $C logs "$svc" | tail -30; done
+              exit 1
+            fi
+            sleep 1
+          done
+
+          $C ps
+
+      - name: k6 — teste de integracao (fluxo atravessando os servicos)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/k6:/scripts:ro" \
+            -e BASE_URL=http://localhost:18080 \
+            docker.io/grafana/k6:2.2.0 run /scripts/integration.js
+
+      - name: logs do stack (so se algo falhou)
+        if: failure()
+        run: docker compose -f deploy/compose/docker-compose.integration.yml logs --tail=80
+
+      - name: derruba o stack
+        if: always()
+        run: docker compose -f deploy/compose/docker-compose.integration.yml down -v || true
+
+      # ── Promoção ────────────────────────────────────────────────────────
+      # Só chega aqui se o k6 passou. Escreve as tags testadas nos manifests
+      # e commita: é isso que o Argo CD observa. Não roda em PR — PR testa,
+      # não promove.
+      - name: promove as versoes testadas para os manifests
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          bump() {
+            local image="$1" tag="$2"
+            sed -i -E "s|(ghcr\.io/davypaulino/${image}):v[0-9]+\.[0-9]+\.[0-9]+|\1:${tag}|g" manifests/*.yaml
+          }
+          bump pong-user-session "$USER_SESSION_TAG"
+          bump pong-game-core    "$GAME_CORE_TAG"
+          bump pong-front-end    "$FRONT_END_TAG"
+
+          if git diff --quiet -- manifests/; then
+            echo "manifests já apontam para as versões testadas — nada a promover"
+            exit 0
+          fi
+
+          echo "=== o que muda nos manifests ==="
+          git diff --stat -- manifests/
+          grep -hoE "ghcr\.io/davypaulino/pong-[a-z-]+:v[0-9.]+" manifests/*.yaml | sort -u
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifests/
+          git commit -m "build: promove user-session ${USER_SESSION_TAG}, game-core ${GAME_CORE_TAG}, front-end ${FRONT_END_TAG}
+
+          Versões validadas pelo teste de integração k6 (fluxo atravessando os
+          três serviços) antes de chegarem aqui. O Argo CD sincroniza a partir
+          deste commit."
+          git push origin HEAD:main

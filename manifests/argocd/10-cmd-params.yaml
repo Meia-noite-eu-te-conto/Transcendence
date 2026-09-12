@@ -1,0 +1,17 @@
+# `server.insecure: true` é obrigatório aqui, não uma frouxidão.
+#
+# O argocd-server serve gRPC e HTTP na mesma porta e, por padrão, redireciona
+# HTTP para HTTPS. Atrás de um Ingress que JÁ termina TLS, isso cria laço de
+# redirecionamento e a UI não abre. Com `insecure`, o servidor fala HTTP puro
+# e quem termina TLS é o ingress-nginx (ver 20-ingress.yaml) — o tráfego
+# continua cifrado do navegador até o Ingress.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  server.insecure: "true"
