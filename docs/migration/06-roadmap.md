@@ -95,6 +95,9 @@ Manifests em [`manifests/`](../../manifests/).
 | **TK.11** | `requests` e `limits` em todo workload | P | TK.8, TK.9 | conforme o orçamento em [docs/deploy/02-recursos.md](../deploy/02-recursos.md). Os apps que já existem no cluster estão com `resources: {}` — este projeto não repete isso |
 | **TK.12** | 🚦 Validação ponta a ponta no cluster | M | TK.10, TK.11 | criar sala, entrar com dois navegadores, iniciar, jogar até 5 pontos, ver o resultado no ranking. Mais: matar o pod do `game-worker` no meio de uma partida e **documentar** o que acontece (hoje: a partida morre) |
 | **TK.13** | Dashboard no Grafana existente | P | TK.11 | CPU, memória e restart por workload; profundidade das listas Redis. Aproveita o Grafana em `observability` |
+| **TK.14** | Teste de integração k6 no repositório raiz | M | TK.12 | `k6/integration.js` atravessa os três serviços pelas imagens publicadas, entrando pelo front-end. Os checks codificam os contratos que quebraram em v2.0.1–v2.0.4 |
+| **TK.15** | Gate de promoção no CI do raiz | M | TK.14 | `integration.yml` deriva a tag da imagem do pin do submodule, testa, e só então escreve nos `manifests/`. Falha se o pin não tiver tag `vX.Y.Z` |
+| **TK.16** | Argo CD sincronizando `manifests/` | M | TK.15 | GitOps: o git é a única entrada para o cluster. **Sem** Image Updater, que pularia o gate de teste |
 
 **Portão 0-K:** jogo jogável em `pong.homelab`, com recursos declarados e limitações
 conhecidas e escritas. É a linha de base contra a qual cada onda seguinte é comparada.

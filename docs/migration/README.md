@@ -146,6 +146,9 @@ uma estão em [06-roadmap.md](06-roadmap.md).
 | 0-K | requests/limits em todo workload | — |
 | 0-K | validação ponta a ponta no cluster | ✅ 2026-09-12 — TK.12 completa; achou e corrigiu roteamento (v2.0.1) e contrato de rooms (v2.0.2) |
 | 0-K | dashboard no Grafana | — (portão fechado sem isso; fica pendente) |
+| 0-K | **TK.14** teste de integração k6 no raiz | ✅ 2026-09-12 — 17 checks contra o cluster real |
+| 0-K | **TK.15** gate de promoção (`integration.yml`) | ⏳ 4 iterações de correção; aguardando run verde |
+| 0-K | **TK.16** Argo CD sincronizando `manifests/` | ⏳ manifests prontos; instalação no cluster pendente |
 | 1 | `services/stats` (scaffold) | — |
 | 1 | ranking portado + paridade | — |
 | 1 | histórico de torneio portado + paridade | — |

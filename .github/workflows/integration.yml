@@ -86,19 +86,61 @@ jobs:
           username: davypaulino
           password: ${{ secrets.GHCR_TOKEN }}
 
+      # Sem `--wait`: ele falha sem dizer QUAL serviço quebrou, o que custou
+      # várias iterações de depuração às cegas. A espera explícita abaixo
+      # imprime o estado de cada serviço a cada tentativa, então uma falha
+      # futura se autodiagnostica no próprio log.
       - name: sobe o stack completo com as imagens publicadas
         run: |
           set -euo pipefail
           C="docker compose -f deploy/compose/docker-compose.integration.yml"
-          # Nomeia só os serviços de longa duração: `--wait` espera por
-          # running/healthy, e os dois *-migrate TERMINAM (exit 0), estado que
-          # nunca satisfaz essa condição. As migrations rodam de qualquer forma,
-          # puxadas pelo depends_on: service_completed_successfully.
-          $C up -d --wait --wait-timeout 240 \
-            postgres redis user-session game-core game-worker session-worker front-end
+
+          $C up -d
+
+          echo "=== estado inicial ==="
+          $C ps -a --format '{{.Service}}\t{{.State}}\t{{.Status}}'
+
+          # Migrations primeiro: são one-shot e precisam terminar com 0 antes
+          # de qualquer coisa depender delas.
+          for m in user-session-migrate game-core-migrate; do
+            for i in $(seq 1 60); do
+              state=$($C ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | awk -v s="$m" '$1==s {print $2" "$3}')
+              case "$state" in
+                "exited 0") echo "  $m: OK"; break ;;
+                "exited "*) echo "::error::$m falhou: $state"; $C logs "$m" | tail -40; exit 1 ;;
+              esac
+              [ "$i" = "60" ] && { echo "::error::$m não terminou em 60s"; $C logs "$m" | tail -40; exit 1; }
+              sleep 1
+            done
+          done
+
+          # Serviços de longa duração: espera healthy (ou running, para os que
+          # não têm healthcheck).
+          need="postgres redis user-session game-core game-worker session-worker front-end"
+          for i in $(seq 1 120); do
+            pending=""
+            for svc in $need; do
+              line=$($C ps -a --format '{{.Service}} {{.State}} {{.Health}}' | awk -v s="$svc" '$1==s {print $2" "$3}')
+              case "$line" in
+                "running healthy"|"running ") ;;          # ok
+                "exited"*|"dead"*)
+                  echo "::error::$svc morreu: $line"
+                  $C logs "$svc" | tail -40
+                  exit 1 ;;
+                *) pending="$pending $svc" ;;
+              esac
+            done
+            [ -z "$pending" ] && { echo "=== todos prontos em ${i}s ==="; break; }
+            if [ "$i" = "120" ]; then
+              echo "::error::não ficaram prontos em 120s:$pending"
+              $C ps -a
+              for svc in $pending; do echo "--- logs de $svc ---"; $C logs "$svc" | tail -30; done
+              exit 1
+            fi
+            sleep 1
+          done
+
           $C ps
-          echo "=== as migrations completaram? ==="
-          $C ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | grep migrate
 
       - name: k6 — teste de integracao (fluxo atravessando os servicos)
         run: |
