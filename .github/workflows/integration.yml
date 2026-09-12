@@ -69,6 +69,11 @@ jobs:
             fi
             echo "  $dir -> $tag (${pin:0:7})"
             echo "$out=$tag" >> "$GITHUB_OUTPUT"
+            # Também no GITHUB_ENV: o `docker compose` reinterpola o arquivo em
+            # TODA invocação, então os passos de logs e down precisam das
+            # variáveis tanto quanto o de subir. Sem isso, uma falha real fica
+            # mascarada por "required variable ... is missing a value".
+            echo "$(echo "$out" | tr 'a-z' 'A-Z')=$tag" >> "$GITHUB_ENV"
           }
           resolve User-Session   user_session_tag
           resolve Game-Core      game_core_tag
@@ -82,14 +87,18 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: sobe o stack completo com as imagens publicadas
-        env:
-          USER_SESSION_TAG: ${{ steps.versions.outputs.user_session_tag }}
-          GAME_CORE_TAG: ${{ steps.versions.outputs.game_core_tag }}
-          FRONT_END_TAG: ${{ steps.versions.outputs.front_end_tag }}
         run: |
           set -euo pipefail
-          docker compose -f deploy/compose/docker-compose.integration.yml up -d --wait --wait-timeout 180
-          docker compose -f deploy/compose/docker-compose.integration.yml ps
+          C="docker compose -f deploy/compose/docker-compose.integration.yml"
+          # Nomeia só os serviços de longa duração: `--wait` espera por
+          # running/healthy, e os dois *-migrate TERMINAM (exit 0), estado que
+          # nunca satisfaz essa condição. As migrations rodam de qualquer forma,
+          # puxadas pelo depends_on: service_completed_successfully.
+          $C up -d --wait --wait-timeout 240 \
+            postgres redis user-session game-core game-worker session-worker front-end
+          $C ps
+          echo "=== as migrations completaram? ==="
+          $C ps -a --format '{{.Service}} {{.State}} {{.ExitCode}}' | grep migrate
 
       - name: k6 — teste de integracao (fluxo atravessando os servicos)
         run: |
@@ -112,10 +121,6 @@ jobs:
       # não promove.
       - name: promove as versoes testadas para os manifests
         if: github.event_name != 'pull_request'
-        env:
-          USER_SESSION_TAG: ${{ steps.versions.outputs.user_session_tag }}
-          GAME_CORE_TAG: ${{ steps.versions.outputs.game_core_tag }}
-          FRONT_END_TAG: ${{ steps.versions.outputs.front_end_tag }}
         run: |
           set -euo pipefail
           bump() {

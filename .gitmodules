@@ -1,12 +1,12 @@
 [submodule "Game-Front-End"]
 	path = Game-Front-End
-	url = git@github.com:Meia-noite-eu-te-conto/Game-Front-End.git
+	url = https://github.com/Meia-noite-eu-te-conto/Game-Front-End.git
 [submodule "Game-Core"]
 	path = Game-Core
-	url = git@github.com:Meia-noite-eu-te-conto/Game-Core.git
+	url = https://github.com/Meia-noite-eu-te-conto/Game-Core.git
 [submodule "User-Session"]
 	path = User-Session
-	url = git@github.com:Meia-noite-eu-te-conto/User-Session.git
+	url = https://github.com/Meia-noite-eu-te-conto/User-Session.git
 [submodule "Game-BFF"]
 	path = Game-BFF
-	url = git@github.com:Meia-noite-eu-te-conto/Game-BFF.git
+	url = https://github.com/Meia-noite-eu-te-conto/Game-BFF.git
