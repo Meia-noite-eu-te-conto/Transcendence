@@ -43,7 +43,7 @@ spec:
         - name: github-registry
       containers:
         - name: game-worker
-          image: ghcr.io/davypaulino/pong-game-core:v2.0.0
+          image: ghcr.io/davypaulino/pong-game-core:v2.0.1
           command: ["python", "manage.py", "session_worker"]
           env:
             - name: DB_NAME
@@ -94,7 +94,7 @@ spec:
         - name: github-registry
       containers:
         - name: session-worker
-          image: ghcr.io/davypaulino/pong-user-session:v2.0.0
+          image: ghcr.io/davypaulino/pong-user-session:v2.0.1
           command: ["python", "manage.py", "game_integration"]
           env:
             - name: DB_NAME

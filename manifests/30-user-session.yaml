@@ -40,7 +40,7 @@ spec:
         - name: github-registry
       containers:
         - name: user-session
-          image: ghcr.io/davypaulino/pong-user-session:v2.0.0
+          image: ghcr.io/davypaulino/pong-user-session:v2.0.1
           command:
             - uvicorn
             - session.asgi:application
